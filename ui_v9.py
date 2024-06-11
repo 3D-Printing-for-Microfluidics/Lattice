@@ -101,17 +101,29 @@ class RectangleApp:
         self.dimensions_label = tk.Label(master, text="", bg="lightgray")
         self.dimensions_label.pack(side=tk.TOP, fill=tk.X)
 
-        self.canvas = tk.Canvas(master, width=400, height=400, bg="white")
+        self.canvas = tk.Canvas(master, width=1200, height=800, bg="white")
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
         self.rectangles = []
         self.selected_rectangles = []
 
     def add_rectangle(self):
-        # You can get dimensions from text input boxes here
+        # Deselect all other rectangles
+        for rect in self.selected_rectangles:
+            rect.selected = False
+            self.canvas.itemconfig(rect.rect, outline="", width=1)
+        self.selected_rectangles.clear()
+
+        # Create a new rectangle and select it
         x, y, width, height = 50, 50, 100, 100
         rectangle = Rectangle(self.canvas, x, y, width, height, self)
+        rectangle.selected = True
+        self.canvas.itemconfig(rectangle.rect, outline="red", width=3)
         self.rectangles.append(rectangle)
+        self.selected_rectangles.append(rectangle)
+
+        # Update label with dimensions and coordinates of the new rectangle
+        self.update_label(rectangle.x, rectangle.y, rectangle.width, rectangle.height)
 
     def delete_rectangle(self):
         for rect in self.selected_rectangles:
@@ -153,6 +165,7 @@ class RectangleApp:
                         rect_data["y"],
                         rect_data["width"],
                         rect_data["height"],
+                        self,
                     )
                     self.rectangles.append(rectangle)
             except FileNotFoundError:
