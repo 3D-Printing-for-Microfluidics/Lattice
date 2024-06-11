@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import filedialog
 import json
 
 
@@ -27,7 +28,7 @@ class Rectangle:
                     self.canvas.itemconfig(r, tags="rect")
 
         # Set red outline for the selected rectangle
-        self.canvas.itemconfig(self.rect, outline="red")
+        self.canvas.itemconfig(self.rect, outline="red", width=2)
         self.canvas.itemconfig(self.rect, tags=("rect", "selected"))
 
         # Update label with dimensions and coordinates
@@ -65,7 +66,7 @@ class RectangleApp:
         self.master = master
         self.master.title("Rectangle App")
 
-        self.canvas = tk.Canvas(master, width=400, height=400, bg="white")
+        self.canvas = tk.Canvas(master, width=1600, height=800, bg="white")
         self.canvas.pack()
 
         self.rectangles = []
@@ -111,13 +112,27 @@ class RectangleApp:
             data.append(
                 {"x": rect.x, "y": rect.y, "width": rect.width, "height": rect.height}
             )
-        with open("rectangles.json", "w") as f:
-            json.dump(data, f)
+
+        # Prompt the user for a filename
+        filename = filedialog.asksaveasfilename(
+            defaultextension=".json",
+            initialfile="rectangles.json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+        )
+        if filename:
+            with open(filename, "w") as f:
+                json.dump(data, f)
 
     def load_rectangles(self):
-        try:
-            with open("rectangles.json", "r") as f:
-                data = json.load(f)
+        filename = filedialog.askopenfilename(
+            defaultextension=".json",
+            initialfile="rectangles.json",
+            filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
+        )
+        if filename:
+            try:
+                with open(filename, "r") as f:
+                    data = json.load(f)
                 for rect_data in data:
                     rectangle = Rectangle(
                         self.canvas,
@@ -127,8 +142,10 @@ class RectangleApp:
                         rect_data["height"],
                     )
                     self.rectangles.append(rectangle)
-        except FileNotFoundError:
-            print("File not found.")
+            except FileNotFoundError:
+                print("File not found.")
+            except json.JSONDecodeError:
+                print("Invalid JSON file.")
 
 
 def main():
