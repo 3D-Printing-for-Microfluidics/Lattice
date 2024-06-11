@@ -4,8 +4,9 @@ import json
 
 
 class Rectangle:
-    def __init__(self, canvas, x, y, width, height):
+    def __init__(self, canvas, x, y, width, height, app):
         self.canvas = canvas
+        self.app = app  # Reference to the RectangleApp instance
         self.rect = canvas.create_rectangle(
             x, y, x + width, y + height, fill="blue", tags="rect"
         )
@@ -15,47 +16,53 @@ class Rectangle:
         self.y = y
         self.width = width
         self.height = height
-        self.start_x = None  # Initialize start_x
-        self.start_y = None  # Initialize start_y
-        self.selected = False  # Track whether the rectangle is selected
+        self.start_x = None
+        self.start_y = None
+        self.selected = False
 
     def on_click(self, event):
-        # Remove red outline from previously selected rectangle
-        for rect in self.canvas.find_withtag("rect"):
-            self.canvas.itemconfig(rect, outline="")
-            for r in self.canvas.find_withtag("rect"):
-                if self.canvas.gettags(r) == ("rect", "selected"):
-                    self.canvas.itemconfig(r, tags="rect")
+        if not self.canvas.find_withtag("current"):
+            return
 
-        # Set red outline for the selected rectangle
-        self.canvas.itemconfig(self.rect, outline="red", width=2)
-        self.canvas.itemconfig(self.rect, tags=("rect", "selected"))
+        if event.state & 0x0001:  # Shift key is held
+            if self.selected:
+                self.selected = False
+                self.canvas.itemconfig(self.rect, outline="", width=1)
+                self.app.selected_rectangles.remove(self)
+            else:
+                self.selected = True
+                self.canvas.itemconfig(self.rect, outline="red", width=3)
+                self.app.selected_rectangles.append(self)
+        else:
+            # Deselect all other rectangles
+            for rect in self.app.selected_rectangles:
+                rect.selected = False
+                self.canvas.itemconfig(rect.rect, outline="", width=1)
+            self.app.selected_rectangles.clear()
 
-        # Update label with dimensions and coordinates
-        self.canvas.itemconfig(
-            "dimensions",
-            text=f"X: {self.x}, Y: {self.y}, Width: {self.width}, Height: {self.height}",
-        )
+            # Select the clicked rectangle
+            self.selected = True
+            self.canvas.itemconfig(self.rect, outline="red", width=3)
+            self.app.selected_rectangles.append(self)
+
+        # Update label with dimensions and coordinates of the last clicked rectangle
+        self.app.update_label(self.x, self.y, self.width, self.height)
 
         # Set start coordinates for dragging
         self.start_x = event.x
         self.start_y = event.y
 
     def on_drag(self, event):
-        if (
-            self.start_x is not None and self.start_y is not None
-        ):  # Check if start coordinates are initialized
+        if self.start_x is not None and self.start_y is not None:
             dx = event.x - self.start_x
             dy = event.y - self.start_y
-            self.canvas.move(self.rect, dx, dy)
-            self.x += dx
-            self.y += dy
+            for rect in self.app.selected_rectangles:
+                self.canvas.move(rect.rect, dx, dy)
+                rect.x += dx
+                rect.y += dy
             self.start_x = event.x
             self.start_y = event.y
-            self.canvas.itemconfig(
-                "dimensions",
-                text=f"X: {self.x}, Y: {self.y}, Width: {self.width}, Height: {self.height}",
-            )
+            self.app.update_label(self.x, self.y, self.width, self.height)
 
     def delete(self):
         self.canvas.delete(self.rect)
@@ -66,45 +73,51 @@ class RectangleApp:
         self.master = master
         self.master.title("Rectangle App")
 
-        self.canvas = tk.Canvas(master, width=1600, height=800, bg="white")
-        self.canvas.pack()
+        # Create a frame for the buttons
+        self.button_frame = tk.Frame(master)
+        self.button_frame.pack(side=tk.TOP, fill=tk.X)
 
-        self.rectangles = []
-
-        # Create label for dimensions and coordinates
-        self.dimensions_label = tk.Label(master, text="test")
-        self.dimensions_label.pack(fill=tk.X)
-
+        # Add buttons to the button frame
         self.add_button = tk.Button(
-            master, text="Add Rectangle", command=self.add_rectangle
+            self.button_frame, text="Add Rectangle", command=self.add_rectangle
         )
-        self.add_button.pack()
+        self.add_button.pack(side=tk.LEFT)
 
         self.delete_button = tk.Button(
-            master, text="Delete Rectangle", command=self.delete_rectangle
+            self.button_frame, text="Delete Rectangle", command=self.delete_rectangle
         )
-        self.delete_button.pack()
+        self.delete_button.pack(side=tk.LEFT)
 
-        self.save_button = tk.Button(master, text="Save", command=self.save_rectangles)
-        self.save_button.pack()
+        self.save_button = tk.Button(
+            self.button_frame, text="Save", command=self.save_rectangles
+        )
+        self.save_button.pack(side=tk.LEFT)
 
-        self.load_button = tk.Button(master, text="Load", command=self.load_rectangles)
-        self.load_button.pack()
+        self.load_button = tk.Button(
+            self.button_frame, text="Load", command=self.load_rectangles
+        )
+        self.load_button.pack(side=tk.LEFT)
+
+        self.dimensions_label = tk.Label(master, text="", bg="lightgray")
+        self.dimensions_label.pack(side=tk.TOP, fill=tk.X)
+
+        self.canvas = tk.Canvas(master, width=400, height=400, bg="white")
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+
+        self.rectangles = []
+        self.selected_rectangles = []
 
     def add_rectangle(self):
         # You can get dimensions from text input boxes here
         x, y, width, height = 50, 50, 100, 100
-        rectangle = Rectangle(self.canvas, x, y, width, height)
+        rectangle = Rectangle(self.canvas, x, y, width, height, self)
         self.rectangles.append(rectangle)
 
     def delete_rectangle(self):
-        for rect in self.canvas.find_withtag("rect"):
-            if self.canvas.gettags(rect) == ("rect", "selected"):
-                for r in self.rectangles:
-                    if r.rect == rect:
-                        r.delete()
-                        self.rectangles.remove(r)
-                        break
+        for rect in self.selected_rectangles:
+            rect.delete()
+            self.rectangles.remove(rect)
+        self.selected_rectangles.clear()
 
     def save_rectangles(self):
         data = []
@@ -113,7 +126,7 @@ class RectangleApp:
                 {"x": rect.x, "y": rect.y, "width": rect.width, "height": rect.height}
             )
 
-        # Prompt the user for a filename
+        # Prompt the user for a filename with a default name
         filename = filedialog.asksaveasfilename(
             defaultextension=".json",
             initialfile="rectangles.json",
@@ -146,6 +159,11 @@ class RectangleApp:
                 print("File not found.")
             except json.JSONDecodeError:
                 print("Invalid JSON file.")
+
+    def update_label(self, x, y, width, height):
+        self.dimensions_label.config(
+            text=f"X: {x}, Y: {y}, Width: {width}, Height: {height}"
+        )
 
 
 def main():
