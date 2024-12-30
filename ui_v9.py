@@ -1,12 +1,75 @@
+"""UT for 3D Print Dose Customization."""
+
+from __future__ import annotations
+
 import json
 import tkinter as tk
+from pathlib import Path
 from tkinter import colorchooser, filedialog, simpledialog
 
 
 class Rectangle:
-    def __init__(self, canvas, x, y, width, height, app, group=None):
+    """A class used to represent a Rectangle on a Tkinter Canvas.
+
+    Attributes
+    ----------
+    canvas : tk.Canvas
+        The canvas on which the rectangle is drawn.
+    app : RectangleApp
+        Reference to the RectangleApp instance.
+    rect : int
+        The ID of the rectangle on the canvas.
+    x : int
+        The x-coordinate of the rectangle.
+    y : int
+        The y-coordinate of the rectangle.
+    width : int
+        The width of the rectangle.
+    height : int
+        The height of the rectangle.
+    start_x : Optional[int]
+        The starting x-coordinate for dragging.
+    start_y : Optional[int]
+        The starting y-coordinate for dragging.
+    selected : bool
+        Whether the rectangle is selected.
+    group : Optional[str]
+        The group to which the rectangle belongs.
+
+    """
+
+    def __init__(
+        self,
+        canvas: tk.Canvas,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        app: RectangleApp,
+        group: str | None = None,
+    ) -> None:
+        """Initialize a rectangle.
+
+        Parameters
+        ----------
+        canvas : tk.Canvas
+            The canvas on which the rectangle is drawn.
+        x : int
+            The x-coordinate of the rectangle.
+        y : int
+            The y-coordinate of the rectangle.
+        width : int
+            The width of the rectangle.
+        height : int
+            The height of the rectangle.
+        app : RectangleApp
+            Reference to the RectangleApp instance.
+        group : str, optional
+            The group to which the rectangle belongs (default is None).
+
+        """
         self.canvas = canvas
-        self.app = app  # Reference to the RectangleApp instance
+        self.app = app
         self.rect = canvas.create_rectangle(x, y, x + width, y + height, fill="blue", tags="rect")
         self.canvas.tag_bind(self.rect, "<Button-1>", self.on_click)
         self.canvas.tag_bind(self.rect, "<B1-Motion>", self.on_drag)
@@ -19,7 +82,15 @@ class Rectangle:
         self.selected = False
         self.group = group
 
-    def on_click(self, event):
+    def on_click(self, event: tk.Event) -> None:
+        """Handle the click event on the rectangle.
+
+        Parameters
+        ----------
+        event : tk.Event
+            The event object containing information about the click event.
+
+        """
         if not self.canvas.find_withtag("current"):
             return
 
@@ -51,7 +122,15 @@ class Rectangle:
         self.start_x = event.x
         self.start_y = event.y
 
-    def on_drag(self, event):
+    def on_drag(self, event: tk.Event) -> None:
+        """Handle the drag event on the rectangle.
+
+        Parameters
+        ----------
+        event : tk.Event
+            The event object containing information about the drag event.
+
+        """
         if self.start_x is not None and self.start_y is not None:
             dx = event.x - self.start_x
             dy = event.y - self.start_y
@@ -63,31 +142,104 @@ class Rectangle:
             self.start_y = event.y
             self.app.update_label(self)
 
-    def delete(self):
+    def delete(self) -> None:
+        """Delete the rectangle from the canvas."""
         self.canvas.delete(self.rect)
 
-    def set_color(self, color):
+    def set_color(self, color: str) -> None:
+        """Set the color of the rectangle.
+
+        Parameters
+        ----------
+        color : str
+            The color to set for the rectangle.
+
+        """
         self.canvas.itemconfig(self.rect, fill=color)
 
-    def set_group(self, group):
+    def set_group(self, group: str) -> None:
+        """Set the group of the rectangle and update its color.
+
+        Parameters
+        ----------
+        group : str
+            The group to set for the rectangle.
+
+        """
         self.group = group
         color = self.app.colors.get(group, "blue")
         self.set_color(color)
 
 
 class RectangleApp:
-    def __init__(self, master):
-        self.master = master
-        self.master.title("3D Print Dose Customization")
+    """A class used to represent the Rectangle Application with a Tkinter GUI.
+
+    Attributes
+    ----------
+    root : tk.Tk
+        The root window of the Tkinter application.
+    button_bar : tk.Frame
+        The frame containing the buttons.
+    pad_x : int
+        The horizontal padding for the buttons.
+    pad_y : int
+        The vertical padding for the buttons.
+    load_button : tk.Button
+        The button to load rectangles from a file.
+    save_button : tk.Button
+        The button to save rectangles to a file.
+    add_button : tk.Button
+        The button to add a new rectangle.
+    delete_button : tk.Button
+        The button to delete selected rectangles.
+    new_group_button : tk.Button
+        The button to create a new group.
+    group_label : tk.Label
+        The label for the current group.
+    group_var : tk.StringVar
+        The variable for the current group.
+    group_dropdown : tk.OptionMenu
+        The dropdown menu for selecting a group.
+    set_color_button : tk.Button
+        The button to set the color of the current group.
+    rename_group_button : tk.Button
+        The button to rename the current group.
+    change_group_button : tk.Button
+        The button to change the group of selected rectangles.
+    dimensions_label : tk.Label
+        The label displaying the dimensions and coordinates of the selected rectangle.
+    canvas : tk.Canvas
+        The canvas on which rectangles are drawn.
+    rectangles : List[Rectangle]
+        The list of rectangles.
+    selected_rectangles : List[Rectangle]
+        The list of selected rectangles.
+    groups : Dict[str, List[Rectangle]]
+        The dictionary of groups and their rectangles.
+    colors : Dict[str, str]
+        The dictionary of groups and their colors.
+
+    """
+
+    def __init__(self, root: tk.Tk) -> None:
+        """Initialize the RectangleApp.
+
+        Parameters
+        ----------
+        root : tk.Tk
+            The root window of the Tkinter application.
+
+        """
+        self.root = root
+        self.root.title("3D Print Dose Customization")
 
         # Create a frame for the button bar
-        self.button_bar = tk.Frame(master)
+        self.button_bar = tk.Frame(root)
         self.button_bar.pack(side=tk.TOP, fill=tk.X)
         self.pad_x = 1
         self.pad_y = 0
 
         # Add buttons to the button bar
-
         self.load_button = tk.Button(self.button_bar, text="Load", command=self.load_rectangles)
         self.load_button.pack(side=tk.LEFT, padx=self.pad_x, pady=self.pad_y)
 
@@ -124,18 +276,19 @@ class RectangleApp:
         )
         self.change_group_button.pack(side=tk.LEFT, padx=self.pad_x, pady=self.pad_y)
 
-        self.dimensions_label = tk.Label(master, text="", bg="lightgray")
+        self.dimensions_label = tk.Label(root, text="", bg="lightgray")
         self.dimensions_label.pack(side=tk.TOP, fill=tk.X)
 
-        self.canvas = tk.Canvas(master, width=400, height=400, bg="white")
+        self.canvas = tk.Canvas(root, width=400, height=400, bg="white")
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
-        self.rectangles = []
-        self.selected_rectangles = []
-        self.groups = {}
-        self.colors = {}
+        self.rectangles: list[Rectangle] = []
+        self.selected_rectangles: list[Rectangle] = []
+        self.groups: dict[str, list[Rectangle]] = {}
+        self.colors: dict[str, str] = {}
 
-    def add_rectangle(self):
+    def add_rectangle(self) -> None:
+        """Add a new rectangle to the canvas."""
         # Deselect all other rectangles
         for rect in self.selected_rectangles:
             rect.selected = False
@@ -156,13 +309,15 @@ class RectangleApp:
         # Update label with dimensions and coordinates of the new rectangle
         self.update_label(rectangle)
 
-    def delete_rectangle(self):
+    def delete_rectangle(self) -> None:
+        """Delete the selected rectangles from the canvas."""
         for rect in self.selected_rectangles:
             rect.delete()
             self.rectangles.remove(rect)
         self.selected_rectangles.clear()
 
-    def save_rectangles(self):
+    def save_rectangles(self) -> None:
+        """Save the rectangles to a JSON file."""
         data = [
             {"x": rect.x, "y": rect.y, "width": rect.width, "height": rect.height, "group": rect.group}
             for rect in self.rectangles
@@ -174,11 +329,11 @@ class RectangleApp:
             initialfile="rectangles.json",
             filetypes=[("JSON files", "*.json"), ("All files", "*.*")],
         )
-        if filename:
-            with open(filename, "w") as f:
-                json.dump({"rectangles": data, "colors": self.colors}, f)
+        with Path(filename).open("w") as f:
+            json.dump({"rectangles": data, "colors": self.colors}, f)
 
-    def load_rectangles(self):
+    def load_rectangles(self) -> None:
+        """Load rectangles from a JSON file."""
         filename = filedialog.askopenfilename(
             defaultextension=".json",
             initialfile="rectangles.json",
@@ -186,7 +341,7 @@ class RectangleApp:
         )
         if filename:
             try:
-                with open(filename, "r") as f:
+                with Path(filename).open() as f:
                     data = json.load(f)
                     for rect_data in data["rectangles"]:
                         rectangle = Rectangle(
@@ -208,19 +363,29 @@ class RectangleApp:
             except json.JSONDecodeError:
                 print("Invalid JSON file.")
 
-    def update_label(self, rect):
+    def update_label(self, rect: Rectangle) -> None:
+        """Update the label with the dimensions and coordinates of the rectangle.
+
+        Parameters
+        ----------
+        rect : Rectangle
+            The rectangle whose information is to be displayed.
+
+        """
         group_text = f", Group: {rect.group}" if rect.group else ""
         dim_text = f"X: {rect.x}, Y: {rect.y}, Width: {rect.width}, Height: {rect.height}"
         self.dimensions_label.config(text=(dim_text + group_text))
 
-    def new_group(self):
+    def new_group(self) -> None:
+        """Create a new group."""
         group_name = simpledialog.askstring("Group Name", "Enter a name for the new group:")
         if group_name and group_name not in self.groups:
             self.groups[group_name] = []
             self.colors[group_name] = "blue"  # Default color
             self.update_group_dropdown()
 
-    def rename_group(self):
+    def rename_group(self) -> None:
+        """Rename the current group."""
         current_group = self.group_var.get()
         if current_group:
             new_group_name = simpledialog.askstring("Rename Group", f"Enter a new name for '{current_group}':")
@@ -235,7 +400,8 @@ class RectangleApp:
                         rect.set_group(new_group_name)
                         self.update_label(rect)
 
-    def set_group_color(self):
+    def set_group_color(self) -> None:
+        """Set the color of the current group."""
         group = self.group_var.get()
         if group:
             color = colorchooser.askcolor()[1]
@@ -245,25 +411,28 @@ class RectangleApp:
                     if rect.group == group:
                         rect.set_color(color)
 
-    def change_group(self):
+    def change_group(self) -> None:
+        """Change the group of the selected rectangles to the current group."""
         group = self.group_var.get()
         if group:
             for rect in self.selected_rectangles:
                 rect.set_group(group)
                 self.update_label(rect)
 
-    def update_group_dropdown(self):
+    def update_group_dropdown(self) -> None:
+        """Update the group dropdown menu."""
         menu = self.group_dropdown["menu"]
         menu.delete(0, "end")
         for group in self.groups:
-            menu.add_command(label=group, command=tk._setit(self.group_var, group))
+            menu.add_command(label=group, command=lambda g=group: self.group_var.set(g))
         if self.groups:
-            self.group_var.set(list(self.groups.keys())[0])
+            self.group_var.set(next(iter(self.groups.keys())))
 
 
-def main():
+def main() -> None:
+    """Run the Tkinter application."""
     root = tk.Tk()
-    app = RectangleApp(root)
+    RectangleApp(root)
     root.mainloop()
 
 
