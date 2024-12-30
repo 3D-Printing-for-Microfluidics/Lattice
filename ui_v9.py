@@ -1,15 +1,13 @@
-import tkinter as tk
-from tkinter import filedialog, simpledialog, colorchooser
 import json
+import tkinter as tk
+from tkinter import colorchooser, filedialog, simpledialog
 
 
 class Rectangle:
     def __init__(self, canvas, x, y, width, height, app, group=None):
         self.canvas = canvas
         self.app = app  # Reference to the RectangleApp instance
-        self.rect = canvas.create_rectangle(
-            x, y, x + width, y + height, fill="blue", tags="rect"
-        )
+        self.rect = canvas.create_rectangle(x, y, x + width, y + height, fill="blue", tags="rect")
         self.canvas.tag_bind(self.rect, "<Button-1>", self.on_click)
         self.canvas.tag_bind(self.rect, "<B1-Motion>", self.on_drag)
         self.x = x
@@ -90,30 +88,20 @@ class RectangleApp:
 
         # Add buttons to the button bar
 
-        self.load_button = tk.Button(
-            self.button_bar, text="Load", command=self.load_rectangles
-        )
+        self.load_button = tk.Button(self.button_bar, text="Load", command=self.load_rectangles)
         self.load_button.pack(side=tk.LEFT, padx=self.pad_x, pady=self.pad_y)
 
-        self.save_button = tk.Button(
-            self.button_bar, text="Save", command=self.save_rectangles
-        )
+        self.save_button = tk.Button(self.button_bar, text="Save", command=self.save_rectangles)
         self.save_button.pack(side=tk.LEFT, padx=self.pad_x, pady=self.pad_y)
 
-        self.add_button = tk.Button(
-            self.button_bar, text="Add Rectangle", command=self.add_rectangle
-        )
+        self.add_button = tk.Button(self.button_bar, text="Add Rectangle", command=self.add_rectangle)
         self.add_button.pack(side=tk.LEFT, padx=self.pad_x, pady=self.pad_y)
 
-        self.delete_button = tk.Button(
-            self.button_bar, text="Delete Rectangle", command=self.delete_rectangle
-        )
+        self.delete_button = tk.Button(self.button_bar, text="Delete Rectangle", command=self.delete_rectangle)
         self.delete_button.pack(side=tk.LEFT, padx=self.pad_x, pady=self.pad_y)
 
         # Group controls
-        self.new_group_button = tk.Button(
-            self.button_bar, text="New Group", command=self.new_group
-        )
+        self.new_group_button = tk.Button(self.button_bar, text="New Group", command=self.new_group)
         self.new_group_button.pack(side=tk.LEFT, padx=self.pad_x + 10, pady=self.pad_y)
 
         self.group_label = tk.Label(self.button_bar, text="Current Group:")
@@ -123,14 +111,10 @@ class RectangleApp:
         self.group_dropdown = tk.OptionMenu(self.button_bar, self.group_var, "")
         self.group_dropdown.pack(side=tk.LEFT, padx=self.pad_x, pady=self.pad_y)
 
-        self.set_color_button = tk.Button(
-            self.button_bar, text="Set Group Color", command=self.set_group_color
-        )
+        self.set_color_button = tk.Button(self.button_bar, text="Set Group Color", command=self.set_group_color)
         self.set_color_button.pack(side=tk.LEFT, padx=self.pad_x, pady=self.pad_y)
 
-        self.rename_group_button = tk.Button(
-            self.button_bar, text="Rename Group", command=self.rename_group
-        )
+        self.rename_group_button = tk.Button(self.button_bar, text="Rename Group", command=self.rename_group)
         self.rename_group_button.pack(side=tk.LEFT, padx=self.pad_x, pady=self.pad_y)
 
         self.change_group_button = tk.Button(
@@ -179,17 +163,10 @@ class RectangleApp:
         self.selected_rectangles.clear()
 
     def save_rectangles(self):
-        data = []
-        for rect in self.rectangles:
-            data.append(
-                {
-                    "x": rect.x,
-                    "y": rect.y,
-                    "width": rect.width,
-                    "height": rect.height,
-                    "group": rect.group,
-                }
-            )
+        data = [
+            {"x": rect.x, "y": rect.y, "width": rect.width, "height": rect.height, "group": rect.group}
+            for rect in self.rectangles
+        ]
 
         # Prompt the user for a filename with a default name
         filename = filedialog.asksaveasfilename(
@@ -233,15 +210,11 @@ class RectangleApp:
 
     def update_label(self, rect):
         group_text = f", Group: {rect.group}" if rect.group else ""
-        dim_text = (
-            f"X: {rect.x}, Y: {rect.y}, Width: {rect.width}, Height: {rect.height}"
-        )
+        dim_text = f"X: {rect.x}, Y: {rect.y}, Width: {rect.width}, Height: {rect.height}"
         self.dimensions_label.config(text=(dim_text + group_text))
 
     def new_group(self):
-        group_name = simpledialog.askstring(
-            "Group Name", "Enter a name for the new group:"
-        )
+        group_name = simpledialog.askstring("Group Name", "Enter a name for the new group:")
         if group_name and group_name not in self.groups:
             self.groups[group_name] = []
             self.colors[group_name] = "blue"  # Default color
@@ -250,9 +223,7 @@ class RectangleApp:
     def rename_group(self):
         current_group = self.group_var.get()
         if current_group:
-            new_group_name = simpledialog.askstring(
-                "Rename Group", f"Enter a new name for '{current_group}':"
-            )
+            new_group_name = simpledialog.askstring("Rename Group", f"Enter a new name for '{current_group}':")
             if new_group_name and new_group_name != current_group:
                 self.groups[new_group_name] = self.groups.pop(current_group, [])
                 self.colors[new_group_name] = self.colors.pop(current_group, "blue")
