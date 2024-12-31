@@ -45,11 +45,11 @@ class RectangleApp:
         """
         self.root = root
         self.root.title("3D Print Dose Customization")
-        self.create_ui()
         self.rectangles = []
         self.selected_rectangles = []
         self.groups = {}
         self.colors = {}
+        self.create_ui()
 
     def create_ui(self) -> None:
         """Create the base UI."""
@@ -77,22 +77,32 @@ class RectangleApp:
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
 
+        group_menu = tk.Menu(menu_bar, tearoff=0)
+        menu_bar.add_cascade(label="Group", menu=group_menu)
+        group_menu.add_command(label="New Group", command=self.new_group)
+        group_menu.add_command(label="Rename Group", command=self.rename_group)
+        group_menu.add_command(label="Change Group Color", command=self.set_group_color)
+        group_menu.add_command(label="Change Selected to Current Group", command=self.change_group)
+
+        self.group_var = tk.StringVar()
+        group_menu.add_separator()
+        self.group_dropdown = tk.Menu(group_menu, tearoff=0)
+        group_menu.add_cascade(label="Current Group", menu=self.group_dropdown)
+
+    def update_group_dropdown(self) -> None:
+        """Update the group dropdown menu."""
+        self.group_dropdown.delete(0, "end")
+        for group in self.groups:
+            self.group_dropdown.add_command(label=group, command=lambda g=group: self.group_var.set(g))
+        if self.groups:
+            self.group_var.set(list(self.groups.keys())[-1])
+
     def create_buttons(self) -> None:
-        """Add buttons and group controls to UI."""
+        """Add buttons to UI."""
         buttons = [
             ("Add Rectangle", self.add_rectangle),
             ("Delete Rectangle(s)", self.delete_rectangle),
-            ("New Group", self.new_group),
-            ("Rename Group", self.rename_group),
-            ("Change Group Color", self.set_group_color),
-            ("Change Selected to Current Group", self.change_group),
         ]
-
-        # Add group dropdown menu
-        self.group_var = tk.StringVar()
-        tk.Label(self.button_bar, text="Current Group:").pack(side=tk.LEFT, padx=1, pady=0)
-        self.group_dropdown = tk.OptionMenu(self.button_bar, self.group_var, "")
-        self.group_dropdown.pack(side=tk.LEFT, padx=1, pady=0)
 
         # Add buttons
         for text, command in buttons:
@@ -102,11 +112,16 @@ class RectangleApp:
     def add_rectangle(self) -> None:
         """Add a new rectangle to the canvas."""
         group = self.group_var.get()
+
         if not group:
             simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
             return
 
-        self.deselect_all()
+        # Deselect all other rectangles
+        for rect in self.selected_rectangles:
+            rect.selected = False
+            self.canvas.itemconfig(rect.rect, outline="", width=0)
+        self.selected_rectangles.clear()
 
         # Create a new rectangle and select it
         x, y, width, height = 50, 50, 100, 100
@@ -271,12 +286,3 @@ class RectangleApp:
         for rect in self.selected_rectangles:
             rect.set_group(group)
             self.update_label(rect)
-
-    def update_group_dropdown(self) -> None:
-        """Update the group dropdown menu."""
-        menu = self.group_dropdown["menu"]
-        menu.delete(0, "end")
-        for group in self.groups:
-            menu.add_command(label=group, command=lambda g=group: self.group_var.set(g))
-        if self.groups:
-            self.group_var.set(list(self.groups.keys())[-1])
