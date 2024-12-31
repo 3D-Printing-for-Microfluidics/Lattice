@@ -71,7 +71,16 @@ class Rectangle:
         """
         self.app = app
         self.canvas = app.canvas
-        self.rect = self.canvas.create_rectangle(x, y, x + width, y + height, fill="blue", tags="rect")
+        self.rect = self.canvas.create_rectangle(
+            x,
+            y,
+            x + width,
+            y + height,
+            fill="blue",
+            tags="rect",
+            outline="",
+            width=0,
+        )
         self.canvas.tag_bind(self.rect, "<Button-1>", self.on_click)
         self.canvas.tag_bind(self.rect, "<B1-Motion>", self.on_drag)
         self.x = x
@@ -94,32 +103,13 @@ class Rectangle:
         """
         if not self.canvas.find_withtag("current"):
             return
-
-        if event.state & 0x0001:  # Shift key is held
-            if self.selected:
-                self.selected = False
-                self.canvas.itemconfig(self.rect, outline="", width=1)
-                self.app.selected_rectangles.remove(self)
-            else:
-                self.selected = True
-                self.canvas.itemconfig(self.rect, outline="red", width=3)
-                self.app.selected_rectangles.append(self)
+        if event.state & 0x0001:  # If shift key is pressed when clicking
+            self.toggle_selection()
         else:
-            # Deselect all other rectangles
             for rect in self.app.selected_rectangles:
-                rect.selected = False
-                self.canvas.itemconfig(rect.rect, outline="", width=1)
-            self.app.selected_rectangles.clear()
-
-            # Select the clicked rectangle
-            self.selected = True
-            self.canvas.itemconfig(self.rect, outline="red", width=3)
-            self.app.selected_rectangles.append(self)
-
-        # Update label with dimensions, coordinates, and group of the last clicked rectangle
+                rect.deselect()
+            self.select()
         self.app.update_label(self)
-
-        # Set start coordinates for dragging
         self.start_x = event.x
         self.start_y = event.y
 
@@ -170,3 +160,22 @@ class Rectangle:
         self.group = group
         color = self.app.colors.get(group, "blue")
         self.set_color(color)
+
+    def select(self) -> None:
+        """Select the rectangle."""
+        self.selected = True
+        self.canvas.itemconfig(self.rect, outline="red", width=3)
+        self.app.selected_rectangles.append(self)
+
+    def deselect(self) -> None:
+        """Deselect the rectangle."""
+        self.selected = False
+        self.canvas.itemconfig(self.rect, outline="", width=0)
+        self.app.selected_rectangles.remove(self)
+
+    def toggle_selection(self) -> None:
+        """Toggle the selection state of the rectangle."""
+        if self.selected:
+            self.deselect()
+        else:
+            self.select()

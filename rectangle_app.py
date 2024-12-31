@@ -51,6 +51,8 @@ class RectangleApp:
 
     def create_ui(self) -> None:
         """Create the base UI."""
+        self.create_menu_bar()
+
         self.button_bar = tk.Frame(self.root)
         self.button_bar.pack(side=tk.TOP, fill=tk.X)
         self.create_buttons()
@@ -61,11 +63,21 @@ class RectangleApp:
         self.canvas = tk.Canvas(self.root, width=400, height=400, bg="white")
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
+    def create_menu_bar(self) -> None:
+        """Create the menu bar."""
+        menu_bar = tk.Menu(self.root)
+        self.root.config(menu=menu_bar)
+
+        file_menu = tk.Menu(menu_bar, tearoff=0)
+        menu_bar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="Load", command=self.load_json)
+        file_menu.add_command(label="Save", command=self.save_json)
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.root.quit)
+
     def create_buttons(self) -> None:
         """Add buttons and group controls to UI."""
         buttons = [
-            ("Load", self.load_rectangles),
-            ("Save", self.save_rectangles),
             ("Add Rectangle", self.add_rectangle),
             ("Delete Rectangle(s)", self.delete_rectangle),
             ("New Group", self.new_group),
@@ -95,8 +107,7 @@ class RectangleApp:
 
         # Deselect all other rectangles
         for rect in self.selected_rectangles:
-            rect.selected = False
-            self.canvas.itemconfig(rect.rect, outline="", width=0)
+            rect.deselect()
         self.selected_rectangles.clear()
 
         # Create a new rectangle and select it
@@ -118,12 +129,15 @@ class RectangleApp:
             self.rectangles.remove(rect)
         self.selected_rectangles.clear()
 
-    def save_rectangles(self) -> None:
-        """Save the rectangles to a JSON file."""
-        data = [
-            {"x": rect.x, "y": rect.y, "width": rect.width, "height": rect.height, "group": rect.group}
-            for rect in self.rectangles
-        ]
+    def save_json(self) -> None:
+        """Save the rectangles and colors to a JSON file."""
+        data = {
+            "rectangles": [
+                {"x": rect.x, "y": rect.y, "width": rect.width, "height": rect.height, "group": rect.group}
+                for rect in self.rectangles
+            ],
+            "colors": self.colors,
+        }
 
         # Prompt the user for a filename with a default name
         filename = filedialog.asksaveasfilename(
@@ -131,26 +145,35 @@ class RectangleApp:
             initialfile="rectangles.json",
             filetypes=[("JSON files", "*.json")],
         )
-        with Path(filename).open("w") as f:
-            json.dump({"rectangles": data, "colors": self.colors}, f)
+        if filename:
+            with Path(filename).open("w") as f:
+                json.dump(data, f)
 
-    def load_rectangles(self) -> None:
-        """Load rectangles from a JSON file."""
+    def load_json(self) -> None:
+        """Load rectangles and colors from a JSON file."""
         filename = filedialog.askopenfilename(
             defaultextension=".json",
             initialfile="rectangles.json",
             filetypes=[("JSON files", "*.json")],
         )
-
+        if not filename:
+            simpledialog.messagebox.showerror("Error", "No file selected.")
+            return
         try:
             with Path(filename).open() as f:
                 data = json.load(f)
         except FileNotFoundError:
             simpledialog.messagebox.showerror("Error", "File not found.")
+            return
         except json.JSONDecodeError:
             simpledialog.messagebox.showerror("Error", "Invalid JSON file.")
+            return
 
-        for rect_data in data["rectangles"]:
+        self.rectangles.clear()
+        self.colors = data.get("colors", {})
+        self.groups = {group: [] for group in self.colors}
+
+        for rect_data in data.get("rectangles", []):
             rectangle = Rectangle(
                 self,
                 rect_data["x"],
@@ -160,9 +183,10 @@ class RectangleApp:
                 rect_data.get("group"),
             )
             if rect_data.get("group"):
-                rectangle.set_color(self.colors[rect_data["group"]])
+                rectangle.set_color(self.colors.get(rect_data["group"], "blue"))
+                self.groups[rect_data["group"]].append(rectangle)  # Add rectangle to group
             self.rectangles.append(rectangle)
-        self.colors = data.get("colors", {})
+
         self.update_group_dropdown()
 
     def update_label(self, rect: Rectangle) -> None:
