@@ -62,8 +62,8 @@ class RectangleApp:
         """Create the base UI."""
         self.create_menu_bar()
         self.create_button_bar()
-        self.create_canvas()
         self.create_label()
+        self.create_canvas()
 
     def create_menu_bar(self) -> None:
         """Create the menu bar."""
@@ -95,16 +95,16 @@ class RectangleApp:
             button = tk.Button(self.button_bar, text=text, command=command)
             button.pack(side=tk.LEFT, padx=1, pady=0)
 
+    def create_label(self) -> None:
+        """Create the dimensions label."""
+        self.dimensions_label = tk.Label(self.root, text="", bg="lightgray")
+        self.dimensions_label.pack(side=tk.TOP, fill=tk.X)
+
     def create_canvas(self) -> None:
         """Create the canvas."""
         self.canvas = tk.Canvas(self.root, width=2000, height=1000, bg="white")
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self.canvas.bind("<Button-1>", self.on_canvas_click)
-
-    def create_label(self) -> None:
-        """Create the dimensions label."""
-        self.dimensions_label = tk.Label(self.root, text="", bg="lightgray")
-        self.dimensions_label.pack(side=tk.TOP, fill=tk.X)
 
     def on_canvas_click(self, event: tk.Event) -> None:
         """Handle the click event on the canvas."""
