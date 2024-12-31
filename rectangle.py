@@ -9,6 +9,8 @@ if TYPE_CHECKING:
 
     from rectangle_app import RectangleApp
 
+SHIFT_KEY = 0x0001
+
 
 class Rectangle:
     """A class used to represent a Rectangle on the Tkinter Canvas.
@@ -101,11 +103,12 @@ class Rectangle:
             The event object containing information about the click event.
 
         """
-        if not self.canvas.find_withtag("current"):  # If nothing is clicked
+        if not self.canvas.find_withtag("current"):  # If no rectangle was clicked
             return
-        if event.state & 0x0001:  # If shift key is pressed when clicking
+
+        if event.state & SHIFT_KEY:  # If shift key was pressed while clicking
             self.toggle_selection()
-        else:  # If a single rectangle is clicked
+        else:  # If a single rectangle was clicked without the shift key
             self.app.deselect_all()
             self.select()
 

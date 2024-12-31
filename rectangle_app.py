@@ -3,11 +3,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import tkinter as tk
 from pathlib import Path
 from tkinter import colorchooser, filedialog, simpledialog
 
 from rectangle import Rectangle
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class RectangleApp:
@@ -67,6 +71,25 @@ class RectangleApp:
 
         self.canvas = tk.Canvas(self.root, width=2000, height=1000, bg="white")
         self.canvas.pack(fill=tk.BOTH, expand=True)
+
+        # Bind a left click event to the canvas
+        self.canvas.bind("<Button-1>", self.on_canvas_click)
+
+    def on_canvas_click(self, event: tk.Event) -> None:
+        """Handle the click event on the canvas.
+
+        Parameters
+        ----------
+        event : tk.Event
+            The event object containing information about the click event.
+
+        """
+        logger.debug("Click at (%d, %d)", event.x, event.y)
+
+        # If no rectangle was clicked
+        if not self.canvas.find_withtag("current"):
+            self.deselect_all()
+            self.update_label(None)
 
     def create_menu_bar(self) -> None:
         """Create the menu bar."""
