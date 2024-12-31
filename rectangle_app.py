@@ -31,6 +31,8 @@ class RectangleApp:
         The dictionary of groups and their rectangles.
     colors : dict[str, str]
         The dictionary of groups and their colors.
+    color_boxes : dict[str, tk.PhotoImage]
+        The dictionary of color box images.
 
     """
 
@@ -49,6 +51,7 @@ class RectangleApp:
         self.selected_rectangles = []
         self.groups = {}
         self.colors = {}
+        self.color_boxes = {}
         self.create_ui()
 
     def create_ui(self) -> None:
@@ -77,25 +80,59 @@ class RectangleApp:
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
 
-        group_menu = tk.Menu(menu_bar, tearoff=0)
-        menu_bar.add_cascade(label="Group", menu=group_menu)
-        group_menu.add_command(label="New Group", command=self.new_group)
-        group_menu.add_command(label="Rename Group", command=self.rename_group)
-        group_menu.add_command(label="Change Group Color", command=self.set_group_color)
-        group_menu.add_command(label="Change Selected to Current Group", command=self.change_group)
+        self.group_menu = tk.Menu(menu_bar, tearoff=0)
+        menu_bar.add_cascade(label="Group", menu=self.group_menu)
 
         self.group_var = tk.StringVar()
-        group_menu.add_separator()
-        self.group_dropdown = tk.Menu(group_menu, tearoff=0)
-        group_menu.add_cascade(label="Current Group", menu=self.group_dropdown)
+        self.update_group_dropdown()
 
     def update_group_dropdown(self) -> None:
         """Update the group dropdown menu."""
-        self.group_dropdown.delete(0, "end")
+        self.group_menu.delete(0, "end")
+
+        self.group_menu.add_command(label="New Group", command=self.new_group)
+        self.group_menu.add_separator()
+
+        self.color_boxes.clear()
+        self.group_menu.add_command(label="- Groups -", state=tk.DISABLED)
         for group in self.groups:
-            self.group_dropdown.add_command(label=group, command=lambda g=group: self.group_var.set(g))
+            color = self.colors.get(group, "blue")
+            label = f"  {group}"
+            color_box = self.create_color_box(color)
+            self.color_boxes[group] = color_box
+            self.group_menu.add_radiobutton(
+                label=label,
+                variable=self.group_var,
+                value=group,
+                indicatoron=1,
+                compound=tk.LEFT,
+                image=color_box,
+            )
+        self.group_menu.add_command(label="Rename Group", command=self.rename_group)
+        self.group_menu.add_command(label="Change Group Color", command=self.set_group_color)
+        self.group_menu.add_command(label="Change Selection to Current Group", command=self.change_group)
+
         if self.groups:
             self.group_var.set(list(self.groups.keys())[-1])
+
+    def create_color_box(self, color: str) -> tk.PhotoImage:
+        """Create a small colored box for the group label.
+
+        Parameters
+        ----------
+        color : str
+            The color of the box.
+
+        Returns
+        -------
+        tk.PhotoImage
+            The image of the colored box.
+
+        """
+        size = 10
+        image = tk.PhotoImage(width=size, height=size)
+        image.put(color, to=(0, 0, size, size))
+        return image
 
     def create_buttons(self) -> None:
         """Add buttons to UI."""
@@ -248,7 +285,7 @@ class RectangleApp:
             simpledialog.messagebox.showerror("Error", "No group is selected.")
             return
 
-        new_group_name = simpledialog.askstring("Rename Group", f"Enter a new name for '{current_group}':")
+        new_group_name = simpledialog.askstring("Rename Group", f"Enter a new name for Group '{current_group}':")
         if new_group_name and new_group_name != current_group:
             self.groups[new_group_name] = self.groups.pop(current_group, [])
             self.colors[new_group_name] = self.colors.pop(current_group, "blue")
@@ -274,6 +311,7 @@ class RectangleApp:
             for rect in self.rectangles:
                 if rect.group == group:
                     rect.set_color(color)
+        self.update_group_dropdown()
 
     def change_group(self) -> None:
         """Change the group of the selected rectangles to the current group."""
