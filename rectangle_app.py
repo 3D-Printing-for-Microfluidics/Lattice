@@ -1,5 +1,7 @@
 """UI for 3D Print Dose Customization."""
 
+from __future__ import annotations
+
 import json
 import tkinter as tk
 from pathlib import Path
@@ -100,15 +102,11 @@ class RectangleApp:
     def add_rectangle(self) -> None:
         """Add a new rectangle to the canvas."""
         group = self.group_var.get()
-
         if not group:
             simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
             return
 
-        # Deselect all other rectangles
-        for rect in self.selected_rectangles:
-            rect.deselect()
-        self.selected_rectangles.clear()
+        self.deselect_all()
 
         # Create a new rectangle and select it
         x, y, width, height = 50, 50, 100, 100
@@ -127,6 +125,12 @@ class RectangleApp:
         for rect in self.selected_rectangles:
             rect.delete()
             self.rectangles.remove(rect)
+        self.selected_rectangles.clear()
+
+    def deselect_all(self) -> None:
+        """Deselect all rectangles."""
+        for rect in self.rectangles:
+            rect.deselect()
         self.selected_rectangles.clear()
 
     def save_json(self) -> None:
@@ -189,15 +193,19 @@ class RectangleApp:
 
         self.update_group_dropdown()
 
-    def update_label(self, rect: Rectangle) -> None:
+    def update_label(self, rect: Rectangle | None) -> None:
         """Update the label with the dimensions and coordinates of the rectangle.
 
         Parameters
         ----------
-        rect : Rectangle
-            The rectangle whose information is to be displayed.
+        rect : Rectangle | None
+            The rectangle whose information is to be displayed or None if no rectangle is selected.
 
         """
+        if rect is None:
+            self.dimensions_label.config(text="")
+            return
+
         text = f"X: {rect.x}, Y: {rect.y}, Width: {rect.width}, Height: {rect.height}, Group: {rect.group}"
         self.dimensions_label.config(text=text)
 

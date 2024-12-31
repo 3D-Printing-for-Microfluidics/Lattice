@@ -101,14 +101,14 @@ class Rectangle:
             The event object containing information about the click event.
 
         """
-        if not self.canvas.find_withtag("current"):
+        if not self.canvas.find_withtag("current"):  # If nothing is clicked
             return
         if event.state & 0x0001:  # If shift key is pressed when clicking
             self.toggle_selection()
-        else:
-            for rect in self.app.selected_rectangles:
-                rect.deselect()
+        else:  # If a single rectangle is clicked
+            self.app.deselect_all()
             self.select()
+
         self.app.update_label(self)
         self.start_x = event.x
         self.start_y = event.y
@@ -171,7 +171,8 @@ class Rectangle:
         """Deselect the rectangle."""
         self.selected = False
         self.canvas.itemconfig(self.rect, outline="", width=0)
-        self.app.selected_rectangles.remove(self)
+        if self in self.app.selected_rectangles:
+            self.app.selected_rectangles.remove(self)
 
     def toggle_selection(self) -> None:
         """Toggle the selection state of the rectangle."""
