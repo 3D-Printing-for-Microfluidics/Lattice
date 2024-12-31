@@ -40,7 +40,7 @@ class Rectangle:
 
     """
 
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         app: RectangleApp,
         x: int,

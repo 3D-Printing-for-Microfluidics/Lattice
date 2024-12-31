@@ -65,7 +65,7 @@ class RectangleApp:
         self.dimensions_label = tk.Label(self.root, text="", bg="lightgray")
         self.dimensions_label.pack(side=tk.TOP, fill=tk.X)
 
-        self.canvas = tk.Canvas(self.root, width=400, height=400, bg="white")
+        self.canvas = tk.Canvas(self.root, width=2000, height=1000, bg="white")
         self.canvas.pack(fill=tk.BOTH, expand=True)
 
     def create_menu_bar(self) -> None:
@@ -149,25 +149,17 @@ class RectangleApp:
     def add_rectangle(self) -> None:
         """Add a new rectangle to the canvas."""
         group = self.group_var.get()
-
         if not group:
             simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
             return
-
-        # Deselect all other rectangles
-        for rect in self.selected_rectangles:
-            rect.selected = False
-            self.canvas.itemconfig(rect.rect, outline="", width=0)
-        self.selected_rectangles.clear()
 
         # Create a new rectangle and select it
         x, y, width, height = 50, 50, 100, 100
         rectangle = Rectangle(self, x, y, width, height, group)
         rectangle.set_color(self.colors[group])
-        rectangle.selected = True
-        self.canvas.itemconfig(rectangle.rect, outline="red", width=3)
         self.rectangles.append(rectangle)
-        self.selected_rectangles.append(rectangle)
+        self.deselect_all()
+        rectangle.select()
 
         # Update label with dimensions and coordinates of the new rectangle
         self.update_label(rectangle)
