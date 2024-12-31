@@ -61,35 +61,9 @@ class RectangleApp:
     def create_ui(self) -> None:
         """Create the base UI."""
         self.create_menu_bar()
-
-        self.button_bar = tk.Frame(self.root)
-        self.button_bar.pack(side=tk.TOP, fill=tk.X)
-        self.create_buttons()
-
-        self.dimensions_label = tk.Label(self.root, text="", bg="lightgray")
-        self.dimensions_label.pack(side=tk.TOP, fill=tk.X)
-
-        self.canvas = tk.Canvas(self.root, width=2000, height=1000, bg="white")
-        self.canvas.pack(fill=tk.BOTH, expand=True)
-
-        # Bind a left click event to the canvas
-        self.canvas.bind("<Button-1>", self.on_canvas_click)
-
-    def on_canvas_click(self, event: tk.Event) -> None:
-        """Handle the click event on the canvas.
-
-        Parameters
-        ----------
-        event : tk.Event
-            The event object containing information about the click event.
-
-        """
-        logger.debug("Click at (%d, %d)", event.x, event.y)
-
-        # If no rectangle was clicked
-        if not self.canvas.find_withtag("current"):
-            self.deselect_all()
-            self.update_label(None)
+        self.create_button_bar()
+        self.create_canvas()
+        self.create_label()
 
     def create_menu_bar(self) -> None:
         """Create the menu bar."""
@@ -109,15 +83,44 @@ class RectangleApp:
         self.group_var = tk.StringVar()
         self.update_group_dropdown()
 
+    def create_button_bar(self) -> None:
+        """Create the button bar."""
+        self.button_bar = tk.Frame(self.root)
+        self.button_bar.pack(side=tk.TOP, fill=tk.X)
+        buttons = [
+            ("Add Rectangle", self.add_rectangle),
+            ("Delete Rectangle(s)", self.delete_rectangle),
+        ]
+        for text, command in buttons:
+            button = tk.Button(self.button_bar, text=text, command=command)
+            button.pack(side=tk.LEFT, padx=1, pady=0)
+
+    def create_canvas(self) -> None:
+        """Create the canvas."""
+        self.canvas = tk.Canvas(self.root, width=2000, height=1000, bg="white")
+        self.canvas.pack(fill=tk.BOTH, expand=True)
+        self.canvas.bind("<Button-1>", self.on_canvas_click)
+
+    def create_label(self) -> None:
+        """Create the dimensions label."""
+        self.dimensions_label = tk.Label(self.root, text="", bg="lightgray")
+        self.dimensions_label.pack(side=tk.TOP, fill=tk.X)
+
+    def on_canvas_click(self, event: tk.Event) -> None:
+        """Handle the click event on the canvas."""
+        logger.debug("Click at (%d, %d)", event.x, event.y)
+        if not self.canvas.find_withtag("current"):
+            self.deselect_all()
+            self.update_label(None)
+
     def update_group_dropdown(self) -> None:
         """Update the group dropdown menu."""
         self.group_menu.delete(0, "end")
-
         self.group_menu.add_command(label="New Group", command=self.new_group)
         self.group_menu.add_separator()
+        self.group_menu.add_command(label="- Groups -", state=tk.DISABLED)
 
         self.color_boxes.clear()
-        self.group_menu.add_command(label="- Groups -", state=tk.DISABLED)
         for group in self.groups:
             color = self.colors.get(group, "blue")
             label = f"  {group}"
@@ -131,10 +134,10 @@ class RectangleApp:
                 compound=tk.LEFT,
                 image=color_box,
             )
+
         self.group_menu.add_command(label="Rename Group", command=self.rename_group)
         self.group_menu.add_command(label="Change Group Color", command=self.set_group_color)
         self.group_menu.add_command(label="Change Selection to Current Group", command=self.change_group)
-
         if self.groups:
             self.group_var.set(list(self.groups.keys())[-1])
 
@@ -157,34 +160,18 @@ class RectangleApp:
         image.put(color, to=(0, 0, size, size))
         return image
 
-    def create_buttons(self) -> None:
-        """Add buttons to UI."""
-        buttons = [
-            ("Add Rectangle", self.add_rectangle),
-            ("Delete Rectangle(s)", self.delete_rectangle),
-        ]
-
-        # Add buttons
-        for text, command in buttons:
-            button = tk.Button(self.button_bar, text=text, command=command)
-            button.pack(side=tk.LEFT, padx=1, pady=0)
-
     def add_rectangle(self) -> None:
         """Add a new rectangle to the canvas."""
         group = self.group_var.get()
         if not group:
             simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
             return
-
-        # Create a new rectangle and select it
         x, y, width, height = 50, 50, 100, 100
         rectangle = Rectangle(self, x, y, width, height, group)
         rectangle.set_color(self.colors[group])
         self.rectangles.append(rectangle)
         self.deselect_all()
         rectangle.select()
-
-        # Update label with dimensions and coordinates of the new rectangle
         self.update_label(rectangle)
 
     def delete_rectangle(self) -> None:
@@ -209,8 +196,6 @@ class RectangleApp:
             ],
             "colors": self.colors,
         }
-
-        # Prompt the user for a filename with a default name
         filename = filedialog.asksaveasfilename(
             defaultextension=".json",
             initialfile="rectangles.json",
@@ -239,11 +224,9 @@ class RectangleApp:
         except json.JSONDecodeError:
             simpledialog.messagebox.showerror("Error", "Invalid JSON file.")
             return
-
         self.rectangles.clear()
         self.colors = data.get("colors", {})
         self.groups = {group: [] for group in self.colors}
-
         for rect_data in data.get("rectangles", []):
             rectangle = Rectangle(
                 self,
@@ -255,9 +238,8 @@ class RectangleApp:
             )
             if rect_data.get("group"):
                 rectangle.set_color(self.colors.get(rect_data["group"], "blue"))
-                self.groups[rect_data["group"]].append(rectangle)  # Add rectangle to group
+                self.groups[rect_data["group"]].append(rectangle)
             self.rectangles.append(rectangle)
-
         self.update_group_dropdown()
 
     def update_label(self, rect: Rectangle | None) -> None:
@@ -272,21 +254,18 @@ class RectangleApp:
         if rect is None:
             self.dimensions_label.config(text="")
             return
-
         text = f"X: {rect.x}, Y: {rect.y}, Width: {rect.width}, Height: {rect.height}, Group: {rect.group}"
         self.dimensions_label.config(text=text)
 
     def new_group(self) -> None:
         """Create a new group."""
         group_name = simpledialog.askstring("Group Name", "Enter a name for the new group:")
-
         if not group_name:
             simpledialog.messagebox.showerror("Error", "Please enter a name for the group.")
             return
         if group_name in self.groups:
             simpledialog.messagebox.showerror("Error", "Group already exists.")
             return
-
         self.groups[group_name] = []
         self.group_var.set(group_name)
         self.set_group_color()
@@ -295,18 +274,14 @@ class RectangleApp:
     def rename_group(self) -> None:
         """Rename the current group."""
         current_group = self.group_var.get()
-
         if not current_group:
             simpledialog.messagebox.showerror("Error", "No group is selected.")
             return
-
         new_group_name = simpledialog.askstring("Rename Group", f"Enter a new name for Group '{current_group}':")
         if new_group_name and new_group_name != current_group:
             self.groups[new_group_name] = self.groups.pop(current_group, [])
             self.colors[new_group_name] = self.colors.pop(current_group, "blue")
             self.update_group_dropdown()
-
-            # Update rectangles belonging to the renamed group
             for rect in self.rectangles:
                 if rect.group == current_group:
                     rect.set_group(new_group_name)
@@ -315,11 +290,9 @@ class RectangleApp:
     def set_group_color(self) -> None:
         """Set the color of the current group."""
         group = self.group_var.get()
-
         if not group:
             simpledialog.messagebox.showerror("Error", "No group is selected.")
             return
-
         color = colorchooser.askcolor()[1]
         if color:
             self.colors[group] = color
@@ -331,11 +304,9 @@ class RectangleApp:
     def change_group(self) -> None:
         """Change the group of the selected rectangles to the current group."""
         group = self.group_var.get()
-
         if not group:
             simpledialog.messagebox.showerror("Error", "No group is selected.")
             return
-
         for rect in self.selected_rectangles:
             rect.set_group(group)
             self.update_label(rect)
