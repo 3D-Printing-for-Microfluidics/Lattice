@@ -38,6 +38,8 @@ class RectangleApp:
         The dictionary of groups and their colors.
     color_boxes : dict[str, tk.PhotoImage]
         The dictionary of color box images.
+    selection_rect : int | None
+        The ID of the selection rectangle on the canvas.
 
     """
 
@@ -57,6 +59,9 @@ class RectangleApp:
         self.groups = {}
         self.colors = {}
         self.color_boxes = {}
+        self.selection_rect = None
+        self.start_x = None
+        self.start_y = None
         self.create_ui()
 
     def create_ui(self) -> None:
@@ -125,13 +130,53 @@ class RectangleApp:
         self.canvas = tk.Canvas(self.root, width=2000, height=1000, bg="white")
         self.canvas.pack(fill=tk.BOTH, expand=True)
         self.canvas.bind("<Button-1>", self.on_canvas_click)
+        self.canvas.bind("<B1-Motion>", self.on_canvas_drag)
+        self.canvas.bind("<ButtonRelease-1>", self.on_canvas_release)
 
     def on_canvas_click(self, event: tk.Event) -> None:
         """Handle the click event on the canvas."""
         logger.debug("Click at (%d, %d)", event.x, event.y)
+        self.start_x = event.x
+        self.start_y = event.y
         if not self.canvas.find_withtag("current"):
             self.deselect_all()
             self.update_label(None)
+            if self.selection_rect:
+                self.canvas.delete(self.selection_rect)
+                self.selection_rect = None
+        else:
+            self.start_x = None
+            self.start_y = None
+
+    def on_canvas_drag(self, event: tk.Event) -> None:
+        """Handle the drag event on the canvas."""
+        if self.start_x is not None and self.start_y is not None:
+            if self.selection_rect:
+                self.canvas.delete(self.selection_rect)
+            self.selection_rect = self.canvas.create_rectangle(
+                self.start_x, self.start_y, event.x, event.y, outline="blue", dash=(2, 2)
+            )
+
+    def on_canvas_release(self, event: tk.Event) -> None:
+        """Handle the release event on the canvas."""
+        if self.selection_rect:
+            x1, y1, x2, y2 = self.canvas.coords(self.selection_rect)
+            self.select_rectangles_in_area(x1, y1, x2, y2)
+            self.canvas.delete(self.selection_rect)
+            self.selection_rect = None
+
+    def select_rectangles_in_area(self, x1: int, y1: int, x2: int, y2: int) -> None:
+        """Select all rectangles within the specified area."""
+        for rect in self.rectangles:
+            if (
+                rect.x >= min(x1, x2)
+                and rect.x + rect.width <= max(x1, x2)
+                and rect.y >= min(y1, y2)
+                and rect.y + rect.height <= max(y1, y2)
+            ):
+                rect.select()
+        if self.selected_rectangles:
+            self.update_label(self.selected_rectangles[0])
 
     def update_group_dropdown(self) -> None:
         """Update the group dropdown menu."""
