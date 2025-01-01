@@ -84,27 +84,33 @@ class RectangleApp:
         self.update_group_dropdown()
 
         rectangle_menu = tk.Menu(menu_bar, tearoff=0)
-        menu_bar.add_cascade(label="Create", menu=rectangle_menu)
+        menu_bar.add_cascade(label="Object", menu=rectangle_menu)
         rectangle_menu.add_command(label="Add", command=self.add_rectangle, accelerator="Ctrl+A")
         rectangle_menu.add_command(label="Delete", command=self.delete_rectangle, accelerator="Ctrl+D")
 
         arrange_menu = tk.Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Arrange", menu=arrange_menu)
-        arrange_menu.add_command(label="Set X", command=self.set_x)
-        arrange_menu.add_command(label="Set Y", command=self.set_y)
+        arrange_menu.add_command(label="Set X", command=self.set_x, accelerator="Ctrl+X")
+        arrange_menu.add_command(label="Set Y", command=self.set_y, accelerator="Ctrl+Y")
         arrange_menu.add_separator()
-        arrange_menu.add_command(label="Align Left", command=self.align_left)
-        arrange_menu.add_command(label="Align Right", command=self.align_right)
-        arrange_menu.add_command(label="Align Top", command=self.align_top)
-        arrange_menu.add_command(label="Align Bottom", command=self.align_bottom)
+        arrange_menu.add_command(label="Align Left", command=self.align_left, accelerator="Ctrl+L")
+        arrange_menu.add_command(label="Align Right", command=self.align_right, accelerator="Ctrl+R")
+        arrange_menu.add_command(label="Align Top", command=self.align_top, accelerator="Ctrl+T")
+        arrange_menu.add_command(label="Align Bottom", command=self.align_bottom, accelerator="Ctrl+B")
 
     def bind_shortcuts(self) -> None:
         """Bind keyboard shortcuts."""
-        self.root.bind_all("<Control-a>", lambda event: self.add_rectangle())
-        self.root.bind_all("<Control-d>", lambda event: self.delete_rectangle())
-        self.root.bind_all("<Control-g>", lambda event: self.new_group())
-        self.root.bind_all("<Control-o>", lambda event: self.load_json())
-        self.root.bind_all("<Control-s>", lambda event: self.save_json())
+        self.root.bind_all("<Control-a>", lambda _: self.add_rectangle())
+        self.root.bind_all("<Control-d>", lambda _: self.delete_rectangle())
+        self.root.bind_all("<Control-g>", lambda _: self.new_group())
+        self.root.bind_all("<Control-o>", lambda _: self.load_json())
+        self.root.bind_all("<Control-s>", lambda _: self.save_json())
+        self.root.bind_all("<Control-x>", lambda _: self.set_x())
+        self.root.bind_all("<Control-y>", lambda _: self.set_y())
+        self.root.bind_all("<Control-l>", lambda _: self.align_left())
+        self.root.bind_all("<Control-r>", lambda _: self.align_right())
+        self.root.bind_all("<Control-t>", lambda _: self.align_top())
+        self.root.bind_all("<Control-b>", lambda _: self.align_bottom())
 
     def create_label(self) -> None:
         """Create the dimensions label."""
