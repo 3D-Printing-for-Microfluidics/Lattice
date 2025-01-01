@@ -90,6 +90,9 @@ class RectangleApp:
 
         arrange_menu = tk.Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Arrange", menu=arrange_menu)
+        arrange_menu.add_command(label="Set X", command=self.set_x)
+        arrange_menu.add_command(label="Set Y", command=self.set_y)
+        arrange_menu.add_separator()
         arrange_menu.add_command(label="Align Left", command=self.align_left)
         arrange_menu.add_command(label="Align Right", command=self.align_right)
         arrange_menu.add_command(label="Align Top", command=self.align_top)
@@ -231,6 +234,26 @@ class RectangleApp:
             rect.set_position(rect.x, max_y - rect.height)
         self.update_label(self.selected_rectangles[0])
 
+    def set_x(self) -> None:
+        """Set the X position for all selected rectangles."""
+        if not self.selected_rectangles:
+            return
+        x = simpledialog.askinteger("Set X", "Enter the X position:")
+        if x is not None:
+            for rect in self.selected_rectangles:
+                rect.set_position(x, rect.y)
+            self.update_label(self.selected_rectangles[0])
+
+    def set_y(self) -> None:
+        """Set the Y position for all selected rectangles."""
+        if not self.selected_rectangles:
+            return
+        y = simpledialog.askinteger("Set Y", "Enter the Y position:")
+        if y is not None:
+            for rect in self.selected_rectangles:
+                rect.set_position(rect.x, y)
+            self.update_label(self.selected_rectangles[0])
+
     def save_json(self) -> None:
         """Save the rectangles and colors to a JSON file."""
         data = {
@@ -354,3 +377,9 @@ class RectangleApp:
         for rect in self.selected_rectangles:
             rect.set_group(group)
             self.update_label(rect)
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = RectangleApp(root)
+    root.mainloop()
