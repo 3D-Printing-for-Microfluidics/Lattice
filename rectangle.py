@@ -39,6 +39,8 @@ class Rectangle:
         Whether the rectangle is selected.
     group : str | None
         The group to which the rectangle belongs.
+    dragged : bool
+        Whether the rectangle was dragged.
 
     """
 
@@ -85,6 +87,7 @@ class Rectangle:
         )
         self.canvas.tag_bind(self.rect, "<Button-1>", self.on_click)
         self.canvas.tag_bind(self.rect, "<B1-Motion>", self.on_drag)
+        self.canvas.tag_bind(self.rect, "<ButtonRelease-1>", self.on_release)
         self.x = x
         self.y = y
         self.width = width
@@ -93,6 +96,7 @@ class Rectangle:
         self.start_y = None
         self.selected = False
         self.group = group
+        self.dragged = False
 
     def on_click(self, event: tk.Event) -> None:
         """Handle the click event on the rectangle.
@@ -106,15 +110,9 @@ class Rectangle:
         if not self.canvas.find_withtag("current"):  # If no rectangle was clicked
             return
 
-        if event.state & SHIFT_KEY:  # If shift key was pressed while clicking
-            self.toggle_selection()
-        else:  # If a single rectangle was clicked without the shift key
-            self.app.deselect_all()
-            self.select()
-
-        self.app.update_label(self)
         self.start_x = event.x
         self.start_y = event.y
+        self.dragged = False
 
     def on_drag(self, event: tk.Event) -> None:
         """Handle the drag event on the rectangle.
@@ -128,12 +126,31 @@ class Rectangle:
         if self.start_x is not None and self.start_y is not None:
             dx = event.x - self.start_x
             dy = event.y - self.start_y
+            if dx != 0 or dy != 0:
+                self.dragged = True
             for rect in self.app.selected_rectangles:
                 self.canvas.move(rect.rect, dx, dy)
                 rect.x += dx
                 rect.y += dy
             self.start_x = event.x
             self.start_y = event.y
+            self.app.update_label(self)
+
+    def on_release(self, event: tk.Event) -> None:
+        """Handle the release event on the rectangle.
+
+        Parameters
+        ----------
+        event : tk.Event
+            The event object containing information about the release event.
+
+        """
+        if not self.dragged:
+            if event.state & SHIFT_KEY:  # If shift key was pressed while clicking
+                self.toggle_selection()
+            else:  # If a single rectangle was clicked without the shift key
+                self.app.deselect_all()
+                self.select()
             self.app.update_label(self)
 
     def delete(self) -> None:
