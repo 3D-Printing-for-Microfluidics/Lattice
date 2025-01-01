@@ -9,6 +9,7 @@ from pathlib import Path
 from tkinter import colorchooser, filedialog, simpledialog
 
 from rectangle import Rectangle
+from tile_dialog import TileDialog
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -87,6 +88,8 @@ class RectangleApp:
         menu_bar.add_cascade(label="Object", menu=rectangle_menu)
         rectangle_menu.add_command(label="Add", command=self.add_rectangle, accelerator="Ctrl+A")
         rectangle_menu.add_command(label="Delete", command=self.delete_rectangle, accelerator="Ctrl+D")
+        rectangle_menu.add_separator()
+        rectangle_menu.add_command(label="Tile Create", command=self.tile)
 
         arrange_menu = tk.Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Arrange", menu=arrange_menu)
@@ -260,6 +263,26 @@ class RectangleApp:
                 rect.set_position(rect.x, y)
             self.update_label(self.selected_rectangles[0])
 
+    def tile(self) -> None:
+        """Tile rectangles based on user input."""
+        group = self.group_var.get()
+        if not group:
+            simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
+            return
+
+        dialog = TileDialog(self.root)
+        self.root.wait_window(dialog.top)
+        if dialog.result:
+            x_start, y_start, x_spacing, y_spacing, num_x, num_y = dialog.result
+            for i in range(num_x):
+                for j in range(num_y):
+                    x = x_start + i * x_spacing
+                    y = y_start + j * y_spacing
+                    rectangle = Rectangle(self, x, y, 100, 100, group)
+                    rectangle.set_color(self.colors[group])
+                    self.rectangles.append(rectangle)
+            self.update_label(self.rectangles[-1])
+
     def save_json(self) -> None:
         """Save the rectangles and colors to a JSON file."""
         data = {
@@ -285,8 +308,7 @@ class RectangleApp:
             initialfile="rectangles.json",
             filetypes=[("JSON files", "*.json")],
         )
-        if not filename:
-            simpledialog.messagebox.showerror("Error", "No file selected.")
+        if not filename:  # Dialog was closed without selecting a file
             return
         try:
             with Path(filename).open() as f:
