@@ -183,3 +183,20 @@ class Rectangle:
             self.deselect()
         else:
             self.select()
+
+    def set_position(self, x: int, y: int) -> None:
+        """Set the position of the rectangle.
+
+        Parameters
+        ----------
+        x : int
+            The new x-coordinate of the rectangle.
+        y : int
+            The new y-coordinate of the rectangle.
+
+        """
+        dx = x - self.x
+        dy = y - self.y
+        self.canvas.move(self.rect, dx, dy)
+        self.x = x
+        self.y = y

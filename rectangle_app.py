@@ -88,6 +88,11 @@ class RectangleApp:
         rectangle_menu.add_command(label="Add Rectangle", command=self.add_rectangle, accelerator="Ctrl+A")
         rectangle_menu.add_command(label="Delete Rectangle(s)", command=self.delete_rectangle, accelerator="Ctrl+D")
 
+        arrange_menu = tk.Menu(menu_bar, tearoff=0)
+        menu_bar.add_cascade(label="Arrange", menu=arrange_menu)
+        arrange_menu.add_command(label="Align Horizontal", command=self.align_horizontal)
+        arrange_menu.add_command(label="Align Vertical", command=self.align_vertical)
+
     def bind_shortcuts(self) -> None:
         """Bind keyboard shortcuts."""
         self.root.bind_all("<Control-a>", lambda event: self.add_rectangle())
@@ -187,6 +192,24 @@ class RectangleApp:
         for rect in self.rectangles:
             rect.deselect()
         self.selected_rectangles.clear()
+
+    def align_horizontal(self) -> None:
+        """Align selected rectangles horizontally."""
+        if not self.selected_rectangles:
+            return
+        min_y = min(rect.y for rect in self.selected_rectangles)
+        for rect in self.selected_rectangles:
+            rect.set_position(rect.x, min_y)
+        self.update_label(self.selected_rectangles[0])
+
+    def align_vertical(self) -> None:
+        """Align selected rectangles vertically."""
+        if not self.selected_rectangles:
+            return
+        min_x = min(rect.x for rect in self.selected_rectangles)
+        for rect in self.selected_rectangles:
+            rect.set_position(min_x, rect.y)
+        self.update_label(self.selected_rectangles[0])
 
     def save_json(self) -> None:
         """Save the rectangles and colors to a JSON file."""
