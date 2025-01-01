@@ -84,14 +84,16 @@ class RectangleApp:
         self.update_group_dropdown()
 
         rectangle_menu = tk.Menu(menu_bar, tearoff=0)
-        menu_bar.add_cascade(label="Rectangle", menu=rectangle_menu)
-        rectangle_menu.add_command(label="Add Rectangle", command=self.add_rectangle, accelerator="Ctrl+A")
-        rectangle_menu.add_command(label="Delete Rectangle(s)", command=self.delete_rectangle, accelerator="Ctrl+D")
+        menu_bar.add_cascade(label="Create", menu=rectangle_menu)
+        rectangle_menu.add_command(label="Add", command=self.add_rectangle, accelerator="Ctrl+A")
+        rectangle_menu.add_command(label="Delete", command=self.delete_rectangle, accelerator="Ctrl+D")
 
         arrange_menu = tk.Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Arrange", menu=arrange_menu)
-        arrange_menu.add_command(label="Align Horizontal", command=self.align_horizontal)
-        arrange_menu.add_command(label="Align Vertical", command=self.align_vertical)
+        arrange_menu.add_command(label="Align Left", command=self.align_left)
+        arrange_menu.add_command(label="Align Right", command=self.align_right)
+        arrange_menu.add_command(label="Align Top", command=self.align_top)
+        arrange_menu.add_command(label="Align Bottom", command=self.align_bottom)
 
     def bind_shortcuts(self) -> None:
         """Bind keyboard shortcuts."""
@@ -193,8 +195,26 @@ class RectangleApp:
             rect.deselect()
         self.selected_rectangles.clear()
 
-    def align_horizontal(self) -> None:
-        """Align selected rectangles horizontally."""
+    def align_left(self) -> None:
+        """Align selected rectangles to the left."""
+        if not self.selected_rectangles:
+            return
+        min_x = min(rect.x for rect in self.selected_rectangles)
+        for rect in self.selected_rectangles:
+            rect.set_position(min_x, rect.y)
+        self.update_label(self.selected_rectangles[0])
+
+    def align_right(self) -> None:
+        """Align selected rectangles to the right."""
+        if not self.selected_rectangles:
+            return
+        max_x = max(rect.x + rect.width for rect in self.selected_rectangles)
+        for rect in self.selected_rectangles:
+            rect.set_position(max_x - rect.width, rect.y)
+        self.update_label(self.selected_rectangles[0])
+
+    def align_top(self) -> None:
+        """Align selected rectangles to the top."""
         if not self.selected_rectangles:
             return
         min_y = min(rect.y for rect in self.selected_rectangles)
@@ -202,13 +222,13 @@ class RectangleApp:
             rect.set_position(rect.x, min_y)
         self.update_label(self.selected_rectangles[0])
 
-    def align_vertical(self) -> None:
-        """Align selected rectangles vertically."""
+    def align_bottom(self) -> None:
+        """Align selected rectangles to the bottom."""
         if not self.selected_rectangles:
             return
-        min_x = min(rect.x for rect in self.selected_rectangles)
+        max_y = max(rect.y + rect.height for rect in self.selected_rectangles)
         for rect in self.selected_rectangles:
-            rect.set_position(min_x, rect.y)
+            rect.set_position(rect.x, max_y - rect.height)
         self.update_label(self.selected_rectangles[0])
 
     def save_json(self) -> None:
