@@ -61,9 +61,9 @@ class RectangleApp:
     def create_ui(self) -> None:
         """Create the base UI."""
         self.create_menu_bar()
-        self.create_button_bar()
         self.create_label()
         self.create_canvas()
+        self.bind_shortcuts()
 
     def create_menu_bar(self) -> None:
         """Create the menu bar."""
@@ -72,8 +72,8 @@ class RectangleApp:
 
         file_menu = tk.Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Load", command=self.load_json)
-        file_menu.add_command(label="Save", command=self.save_json)
+        file_menu.add_command(label="Open", command=self.load_json, accelerator="Ctrl+O")
+        file_menu.add_command(label="Save", command=self.save_json, accelerator="Ctrl+S")
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.quit)
 
@@ -83,17 +83,18 @@ class RectangleApp:
         self.group_var = tk.StringVar()
         self.update_group_dropdown()
 
-    def create_button_bar(self) -> None:
-        """Create the button bar."""
-        self.button_bar = tk.Frame(self.root)
-        self.button_bar.pack(side=tk.TOP, fill=tk.X)
-        buttons = [
-            ("Add Rectangle", self.add_rectangle),
-            ("Delete Rectangle(s)", self.delete_rectangle),
-        ]
-        for text, command in buttons:
-            button = tk.Button(self.button_bar, text=text, command=command)
-            button.pack(side=tk.LEFT, padx=1, pady=0)
+        rectangle_menu = tk.Menu(menu_bar, tearoff=0)
+        menu_bar.add_cascade(label="Rectangle", menu=rectangle_menu)
+        rectangle_menu.add_command(label="Add Rectangle", command=self.add_rectangle, accelerator="Ctrl+A")
+        rectangle_menu.add_command(label="Delete Rectangle(s)", command=self.delete_rectangle, accelerator="Ctrl+D")
+
+    def bind_shortcuts(self) -> None:
+        """Bind keyboard shortcuts."""
+        self.root.bind_all("<Control-a>", lambda event: self.add_rectangle())
+        self.root.bind_all("<Control-d>", lambda event: self.delete_rectangle())
+        self.root.bind_all("<Control-g>", lambda event: self.new_group())
+        self.root.bind_all("<Control-o>", lambda event: self.load_json())
+        self.root.bind_all("<Control-s>", lambda event: self.save_json())
 
     def create_label(self) -> None:
         """Create the dimensions label."""
@@ -116,7 +117,7 @@ class RectangleApp:
     def update_group_dropdown(self) -> None:
         """Update the group dropdown menu."""
         self.group_menu.delete(0, "end")
-        self.group_menu.add_command(label="New Group", command=self.new_group)
+        self.group_menu.add_command(label="New Group", command=self.new_group, accelerator="Ctrl+G")
         self.group_menu.add_separator()
         self.group_menu.add_command(label="- Groups -", state=tk.DISABLED)
 
