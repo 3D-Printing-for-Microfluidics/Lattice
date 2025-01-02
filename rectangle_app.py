@@ -155,6 +155,10 @@ class RectangleApp:
         self.canvas.bind("<B1-Motion>", self.on_canvas_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_canvas_release)
 
+        # Prevent the canvas from resizing when the window is resized
+        self.canvas_frame.pack_propagate(False)
+        self.canvas.pack_propagate(False)
+
     def on_canvas_click(self, event: tk.Event) -> None:
         """Handle the click event on the canvas."""
         logger.debug("Click at (%d, %d)", event.x, event.y)
