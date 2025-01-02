@@ -127,6 +127,9 @@ class RectangleApp:
 
     def create_canvas(self) -> None:
         """Create the canvas with scrollbars."""
+        # Set the main window to start maximized
+        self.root.state("zoomed")
+
         # Create a main frame to hold the canvas and the vertical scrollbar
         self.main_frame = tk.Frame(self.root)
         self.main_frame.pack(fill=tk.BOTH, expand=True)
@@ -135,32 +138,22 @@ class RectangleApp:
         self.canvas_frame = tk.Frame(self.main_frame)
         self.canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # Create the canvas with a fixed size
+        # Create the canvas with a fixed size and scroll region
         self.canvas = tk.Canvas(self.canvas_frame, width=2000, height=1000, bg="white")
-        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.canvas.pack(side=tk.LEFT, fill=tk.NONE, expand=False)
 
-        # Create the vertical scrollbar
+        # Create scrollbars and attach them to the canvas
         self.v_scrollbar = tk.Scrollbar(self.main_frame, orient=tk.VERTICAL, command=self.canvas.yview)
         self.v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-
-        # Create the horizontal scrollbar
         self.h_scrollbar = tk.Scrollbar(self.root, orient=tk.HORIZONTAL, command=self.canvas.xview)
         self.h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
-
-        # Configure the canvas to use the scrollbars
         self.canvas.config(xscrollcommand=self.h_scrollbar.set, yscrollcommand=self.v_scrollbar.set)
+        self.canvas.config(scrollregion=(0, 0, 2000, 1000))
 
         # Bind events to the canvas
         self.canvas.bind("<Button-1>", self.on_canvas_click)
         self.canvas.bind("<B1-Motion>", self.on_canvas_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_canvas_release)
-
-        # Configure the scroll region to include the entire canvas
-        self.canvas.config(scrollregion=(0, 0, 2000, 1000))
-
-        # Prevent the canvas from resizing when the window is resized
-        self.canvas_frame.pack_propagate(False)
-        self.canvas.pack_propagate(False)
 
     def on_canvas_click(self, event: tk.Event) -> None:
         """Handle the click event on the canvas."""
