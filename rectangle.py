@@ -17,8 +17,6 @@ class Rectangle:
 
     Attributes
     ----------
-    canvas : tk.Canvas
-        The canvas on which the rectangle is drawn.
     app : RectangleApp
         Reference to the RectangleApp instance.
     rect : int
@@ -37,7 +35,7 @@ class Rectangle:
         The starting y-coordinate for dragging.
     selected : bool
         Whether the rectangle is selected.
-    group : str | None
+    group : str
         The group to which the rectangle belongs.
     dragged : bool
         Whether the rectangle was dragged.
@@ -51,14 +49,14 @@ class Rectangle:
         y: int,
         width: int,
         height: int,
-        group: str | None = None,
+        group: str,
     ) -> None:
         """Initialize a rectangle.
 
         Parameters
         ----------
-        canvas : tk.Canvas
-            The canvas on which the rectangle is drawn.
+        app : RectangleApp
+            The app in which the rectangle is drawn.
         x : int
             The x-coordinate of the rectangle.
         y : int
@@ -69,13 +67,12 @@ class Rectangle:
             The height of the rectangle.
         app : RectangleApp
             Reference to the RectangleApp instance.
-        group : str | None
-            The group to which the rectangle belongs (default is None).
+        group : str
+            The group to which the rectangle belongs.
 
         """
         self.app = app
-        self.canvas = app.canvas
-        self.rect = self.canvas.create_rectangle(
+        self.rect = self.app.canvas.create_rectangle(
             x,
             y,
             x + width,
@@ -85,9 +82,9 @@ class Rectangle:
             outline="",
             width=0,
         )
-        self.canvas.tag_bind(self.rect, "<Button-1>", self.on_click)
-        self.canvas.tag_bind(self.rect, "<B1-Motion>", self.on_drag)
-        self.canvas.tag_bind(self.rect, "<ButtonRelease-1>", self.on_release)
+        self.app.canvas.tag_bind(self.rect, "<Button-1>", self.on_click)
+        self.app.canvas.tag_bind(self.rect, "<B1-Motion>", self.on_drag)
+        self.app.canvas.tag_bind(self.rect, "<ButtonRelease-1>", self.on_release)
         self.x = x
         self.y = y
         self.width = width
@@ -107,7 +104,7 @@ class Rectangle:
             The event object containing information about the click event.
 
         """
-        if not self.canvas.find_withtag("current"):  # If no rectangle was clicked
+        if not self.app.canvas.find_withtag("current"):  # If no rectangle was clicked
             return
 
         self.start_x = event.x
@@ -129,7 +126,7 @@ class Rectangle:
             if dx != 0 or dy != 0:
                 self.dragged = True
             for rect in self.app.selected_rectangles:
-                self.canvas.move(rect.rect, dx, dy)
+                self.app.canvas.move(rect.rect, dx, dy)
                 rect.x += dx
                 rect.y += dy
             self.start_x = event.x
@@ -155,7 +152,7 @@ class Rectangle:
 
     def delete(self) -> None:
         """Delete the rectangle from the canvas."""
-        self.canvas.delete(self.rect)
+        self.app.canvas.delete(self.rect)
 
     def set_color(self, color: str) -> None:
         """Set the color of the rectangle.
@@ -166,7 +163,7 @@ class Rectangle:
             The color to set for the rectangle.
 
         """
-        self.canvas.itemconfig(self.rect, fill=color)
+        self.app.canvas.itemconfig(self.rect, fill=color)
 
     def set_group(self, group: str) -> None:
         """Set the group of the rectangle and update its color.
@@ -178,19 +175,19 @@ class Rectangle:
 
         """
         self.group = group
-        color = self.app.colors.get(group, "blue")
+        color = self.app.colors[group]
         self.set_color(color)
 
     def select(self) -> None:
         """Select the rectangle."""
         self.selected = True
-        self.canvas.itemconfig(self.rect, outline="red", width=3)
+        self.app.canvas.itemconfig(self.rect, outline="red", width=3)
         self.app.selected_rectangles.append(self)
 
     def deselect(self) -> None:
         """Deselect the rectangle."""
         self.selected = False
-        self.canvas.itemconfig(self.rect, outline="", width=0)
+        self.app.canvas.itemconfig(self.rect, outline="", width=0)
         if self in self.app.selected_rectangles:
             self.app.selected_rectangles.remove(self)
 
@@ -214,6 +211,23 @@ class Rectangle:
         """
         dx = x - self.x
         dy = y - self.y
-        self.canvas.move(self.rect, dx, dy)
+        self.app.canvas.move(self.rect, dx, dy)
         self.x = x
         self.y = y
+
+    def to_dict(self) -> dict:
+        """Convert the rectangle to a dictionary.
+
+        Returns
+        -------
+        dict
+            A dictionary representation of the rectangle.
+
+        """
+        return {
+            "x": self.x,
+            "y": self.y,
+            "width": self.width,
+            "height": self.height,
+            "group": self.group,
+        }
