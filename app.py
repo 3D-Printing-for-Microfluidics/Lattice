@@ -6,10 +6,10 @@ import logging
 import tkinter as tk
 from typing import TYPE_CHECKING
 
-from arrange import align_bottom, align_left, align_right, align_top, set_x, set_y
-from file import load_json, save_json
-from group import change_group, delete_group, new_group, rename_group, set_group_color
-from object import add_rectangle, delete_rectangle, tile
+from menu_arrange import align_bottom, align_left, align_right, align_top, set_x, set_y
+from menu_file import load_json, save_json
+from menu_group import change_group, delete_group, new_group, rename_group, set_group_color
+from menu_object import add_rectangle, delete_rectangle, tile
 
 if TYPE_CHECKING:
     from rectangle import Rectangle
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class App:
-    """A class used to represent the Rectangle Application with a Tkinter GUI.
+    """A class used to represent the Application with a Tkinter GUI.
 
     Attributes
     ----------

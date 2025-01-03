@@ -18,7 +18,7 @@ def new_group(app: "App") -> None:
         return
     prev_group = app.group_var.get()
     app.group_var.set(group_name)
-    app.set_group_color()
+    set_group_color(app)
     if group_name not in app.colors:
         app.group_var.set(prev_group)
         simpledialog.messagebox.showerror("Error", "Please select a color for the new group.")
