@@ -1,4 +1,4 @@
-"""Rectangle class for the RectangleApp."""
+"""Rectangle class for the App."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     import tkinter as tk
 
-    from rectangle_app import RectangleApp
+    from app import App
 
 SHIFT_KEY = 0x0001
 
@@ -17,8 +17,8 @@ class Rectangle:
 
     Attributes
     ----------
-    app : RectangleApp
-        Reference to the RectangleApp instance.
+    app : App
+        Reference to the App instance.
     rect : int
         The ID of the rectangle on the canvas.
     x : int
@@ -44,7 +44,7 @@ class Rectangle:
 
     def __init__(  # noqa: PLR0913
         self,
-        app: RectangleApp,
+        app: App,
         x: int,
         y: int,
         width: int,
@@ -55,7 +55,7 @@ class Rectangle:
 
         Parameters
         ----------
-        app : RectangleApp
+        app : App
             The app in which the rectangle is drawn.
         x : int
             The x-coordinate of the rectangle.
@@ -65,8 +65,8 @@ class Rectangle:
             The width of the rectangle.
         height : int
             The height of the rectangle.
-        app : RectangleApp
-            Reference to the RectangleApp instance.
+        app : App
+            Reference to the App instance.
         group : str
             The group to which the rectangle belongs.
 

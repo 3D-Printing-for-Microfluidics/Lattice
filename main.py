@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import tkinter as tk
 
-from rectangle_app import RectangleApp
+from app import App
 
 
 def main() -> None:
     """Run the Tkinter application."""
     root = tk.Tk()
-    RectangleApp(root)
+    App(root)
     root.mainloop()
 
 

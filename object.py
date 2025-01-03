@@ -1,4 +1,12 @@
-"""Dialog window for getting tile parameters from the user."""
+"""App methods in the Object menu."""
+
+from tkinter import simpledialog
+from typing import TYPE_CHECKING
+
+from rectangle import Rectangle
+
+if TYPE_CHECKING:
+    from app import App
 
 import tkinter as tk
 
@@ -65,3 +73,47 @@ class TileDialog:
     def cancel(self) -> None:
         """Handle the Cancel button click."""
         self.top.destroy()
+
+
+def add_rectangle(app: "App") -> None:
+    """Add a new rectangle to the canvas."""
+    group = app.group_var.get()
+    if not group:
+        simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
+        return
+    x, y, width, height = 50, 50, 100, 100
+    rectangle = Rectangle(app, x, y, width, height, group)
+    rectangle.set_color(app.colors[group])
+    app.groups[group].append(rectangle)
+    app.deselect_all()
+    rectangle.select()
+    app.update_label(rectangle)
+
+
+def delete_rectangle(app: "App") -> None:
+    """Delete the selected rectangles from the canvas."""
+    for rect in app.selected_rectangles:
+        app.groups[rect.group].remove(rect)
+        rect.delete()
+    app.selected_rectangles.clear()
+
+
+def tile(app: "App") -> None:
+    """Tile rectangles based on user input."""
+    group = app.group_var.get()
+    if not group:
+        simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
+        return
+
+    dialog = TileDialog(app.root)
+    app.root.wait_window(dialog.top)
+    if dialog.result:
+        x_start, y_start, x_spacing, y_spacing, num_x, num_y = dialog.result
+        for i in range(num_x):
+            for j in range(num_y):
+                x = x_start + i * x_spacing
+                y = y_start + j * y_spacing
+                rectangle = Rectangle(app, x, y, 100, 100)
+                rectangle.set_color(app.colors[group])
+                app.groups[group].append(rectangle)
+        app.update_label(app.groups[group][-1])
