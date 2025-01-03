@@ -91,7 +91,6 @@ class Rectangle:
         self.height = height
         self.start_x = None
         self.start_y = None
-        self.selected = False
         self.group = group
         self.dragged = False
 
@@ -180,21 +179,19 @@ class Rectangle:
 
     def select(self) -> None:
         """Select the rectangle."""
-        self.selected = True
         self.app.canvas.itemconfig(self.rect, outline="red", width=3)
         if self not in self.app.selected_rectangles:
             self.app.selected_rectangles.append(self)
 
     def deselect(self) -> None:
         """Deselect the rectangle."""
-        self.selected = False
         self.app.canvas.itemconfig(self.rect, outline="", width=0)
         if self in self.app.selected_rectangles:
             self.app.selected_rectangles.remove(self)
 
     def toggle_selection(self) -> None:
         """Toggle the selection state of the rectangle."""
-        if self.selected:
+        if self in self.app.selected_rectangles:
             self.deselect()
         else:
             self.select()
