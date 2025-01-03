@@ -182,7 +182,8 @@ class Rectangle:
         """Select the rectangle."""
         self.selected = True
         self.app.canvas.itemconfig(self.rect, outline="red", width=3)
-        self.app.selected_rectangles.append(self)
+        if self not in self.app.selected_rectangles:
+            self.app.selected_rectangles.append(self)
 
     def deselect(self) -> None:
         """Deselect the rectangle."""

@@ -161,7 +161,7 @@ class RectangleApp:
         logger.debug("Click at (%d, %d)", event.x, event.y)
         self.start_x = event.x
         self.start_y = event.y
-        if not self.canvas.find_withtag("current"):
+        if not self.canvas.find_withtag("current"):  # nothing was under cursor when clicked
             self.deselect_all()
             if self.selection_rect:
                 self.canvas.delete(self.selection_rect)
@@ -278,10 +278,8 @@ class RectangleApp:
 
     def deselect_all(self) -> None:
         """Deselect all rectangles."""
-        for group in self.groups.values():
-            for rect in group:
-                rect.deselect()
-        self.selected_rectangles.clear()
+        for rect in self.selected_rectangles[:]:  # operate on a copy of the list since it will be modified
+            rect.deselect()
         self.update_label(None)
 
     def align_left(self) -> None:
@@ -373,7 +371,7 @@ class RectangleApp:
         )
         if filename:
             with Path(filename).open("w") as f:
-                json.dump(data, f)
+                json.dump(data, f, indent=4)
 
     def load_json(self) -> None:
         """Load rectangles and colors from a JSON file."""
@@ -437,12 +435,14 @@ class RectangleApp:
         if group_name in self.groups:
             simpledialog.messagebox.showerror("Error", "Group already exists.")
             return
+        prev_group = self.group_var.get()
+        self.group_var.set(group_name)
         self.set_group_color()
         if group_name not in self.colors:
+            self.group_var.set(prev_group)
             simpledialog.messagebox.showerror("Error", "Please select a color for the new group.")
             return
         self.groups[group_name] = []
-        self.group_var.set(group_name)
         self.update_group_dropdown()
 
     def delete_group(self) -> None:
@@ -486,7 +486,7 @@ class RectangleApp:
         color = colorchooser.askcolor()[1]
         if color:
             self.colors[group] = color
-            for rect in self.groups[group]:
+            for rect in self.groups.get(group, []):
                 rect.set_color(color)
         self.update_group_dropdown()
 
