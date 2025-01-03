@@ -28,8 +28,6 @@ class RectangleApp:
         The label displaying the dimensions and coordinates of the selected rectangle.
     canvas : tk.Canvas
         The canvas on which rectangles are drawn.
-    rectangles : list[Rectangle]
-        The list of rectangles.
     selected_rectangles : list[Rectangle]
         The list of selected rectangles.
     groups : dict[str, list[Rectangle]]
@@ -54,7 +52,6 @@ class RectangleApp:
         """
         self.root = root
         self.root.title("3D Print Dose Customization")
-        self.rectangles = []
         self.selected_rectangles = []
         self.groups = {}
         self.colors = {}
@@ -91,8 +88,8 @@ class RectangleApp:
 
         rectangle_menu = tk.Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Object", menu=rectangle_menu)
-        rectangle_menu.add_command(label="Add", command=self.add_rectangle, accelerator="Ctrl+A")
-        rectangle_menu.add_command(label="Delete", command=self.delete_rectangle, accelerator="Ctrl+D")
+        rectangle_menu.add_command(label="Add", command=self.add_rectangle, accelerator="Insert")
+        rectangle_menu.add_command(label="Delete", command=self.delete_rectangle, accelerator="Delete")
         rectangle_menu.add_separator()
         rectangle_menu.add_command(label="Tile Create", command=self.tile)
 
@@ -108,8 +105,8 @@ class RectangleApp:
 
     def bind_shortcuts(self) -> None:
         """Bind keyboard shortcuts."""
-        self.root.bind_all("<Control-a>", lambda _: self.add_rectangle())
-        self.root.bind_all("<Control-d>", lambda _: self.delete_rectangle())
+        self.root.bind_all("<Insert>", lambda _: self.add_rectangle())
+        self.root.bind_all("<Delete>", lambda _: self.delete_rectangle())
         self.root.bind_all("<Control-g>", lambda _: self.new_group())
         self.root.bind_all("<Control-o>", lambda _: self.load_json())
         self.root.bind_all("<Control-s>", lambda _: self.save_json())
@@ -156,8 +153,8 @@ class RectangleApp:
         self.canvas.bind("<ButtonRelease-1>", self.on_canvas_release)
 
         # Prevent the canvas from resizing when the window is resized
-        self.canvas_frame.pack_propagate(False)
-        self.canvas.pack_propagate(False)
+        self.canvas_frame.pack_propagate(flag=False)
+        self.canvas.pack_propagate(flag=False)
 
     def on_canvas_click(self, event: tk.Event) -> None:
         """Handle the click event on the canvas."""
@@ -198,14 +195,15 @@ class RectangleApp:
 
     def select_rectangles_in_area(self, x1: int, y1: int, x2: int, y2: int) -> None:
         """Select all rectangles within the specified area."""
-        for rect in self.rectangles:
-            if (
-                rect.x >= min(x1, x2)
-                and rect.x + rect.width <= max(x1, x2)
-                and rect.y >= min(y1, y2)
-                and rect.y + rect.height <= max(y1, y2)
-            ):
-                rect.select()
+        for group in self.groups.values():
+            for rect in group:
+                if (
+                    rect.x >= min(x1, x2)
+                    and rect.x + rect.width <= max(x1, x2)
+                    and rect.y >= min(y1, y2)
+                    and rect.y + rect.height <= max(y1, y2)
+                ):
+                    rect.select()
         if self.selected_rectangles:
             self.update_label(self.selected_rectangles[0])
 
@@ -266,7 +264,7 @@ class RectangleApp:
         x, y, width, height = 50, 50, 100, 100
         rectangle = Rectangle(self, x, y, width, height, group)
         rectangle.set_color(self.colors[group])
-        self.rectangles.append(rectangle)
+        self.groups[group].append(rectangle)
         self.deselect_all()
         rectangle.select()
         self.update_label(rectangle)
@@ -275,13 +273,14 @@ class RectangleApp:
         """Delete the selected rectangles from the canvas."""
         for rect in self.selected_rectangles:
             rect.delete()
-            self.rectangles.remove(rect)
+            self.groups[rect.group].remove(rect)
         self.selected_rectangles.clear()
 
     def deselect_all(self) -> None:
         """Deselect all rectangles."""
-        for rect in self.rectangles:
-            rect.deselect()
+        for group in self.groups.values():
+            for rect in group:
+                rect.deselect()
         self.selected_rectangles.clear()
         self.update_label(None)
 
@@ -358,13 +357,13 @@ class RectangleApp:
                     y = y_start + j * y_spacing
                     rectangle = Rectangle(self, x, y, 100, 100, group)
                     rectangle.set_color(self.colors[group])
-                    self.rectangles.append(rectangle)
-            self.update_label(self.rectangles[-1])
+                    self.groups[group].append(rectangle)
+            self.update_label(self.groups[group][-1])
 
     def save_json(self) -> None:
         """Save the rectangles and colors to a JSON file."""
         data = {
-            "rectangles": [rect.to_dict() for rect in self.rectangles],
+            "rectangles": [rect.to_dict() for group in self.groups.values() for rect in group],
             "colors": self.colors,
         }
         filename = filedialog.asksaveasfilename(
@@ -395,22 +394,22 @@ class RectangleApp:
             simpledialog.messagebox.showerror("Error", "Invalid JSON file.")
             return
 
-        self.rectangles.clear()
+        self.groups.clear()
         self.colors = data.get("colors", {})
         self.groups = {group: [] for group in self.colors}
 
         for rect_data in data.get("rectangles", []):
+            group = rect_data["group"]
             rectangle = Rectangle(
                 self,
                 rect_data["x"],
                 rect_data["y"],
                 rect_data["width"],
                 rect_data["height"],
-                rect_data["group"],
+                group,
             )
-            rectangle.set_color(self.colors[rect_data["group"]])
-            self.groups[rect_data["group"]].append(rectangle)
-            self.rectangles.append(rectangle)
+            rectangle.set_color(self.colors[group])
+            self.groups[group].append(rectangle)
 
         self.update_group_dropdown()
 
@@ -457,7 +456,6 @@ class RectangleApp:
         del_msg += "\nThe group and all rectangles in this group will be deleted."
         if simpledialog.messagebox.askyesno("Delete Group", del_msg):
             for rect in self.groups[group]:
-                self.rectangles.remove(rect)
                 rect.delete()
             del self.groups[group]
             del self.colors[group]
@@ -475,10 +473,9 @@ class RectangleApp:
             self.groups[new_group_name] = self.groups.pop(current_group, [])
             self.colors[new_group_name] = self.colors.pop(current_group, "blue")
             self.update_group_dropdown()
-            for rect in self.rectangles:
-                if rect.group == current_group:
-                    rect.set_group(new_group_name)
-                    self.update_label(None)
+            for rect in self.groups[new_group_name]:
+                rect.set_group(new_group_name)
+            self.update_label(None)
 
     def set_group_color(self) -> None:
         """Set the color of the current group."""
@@ -489,9 +486,8 @@ class RectangleApp:
         color = colorchooser.askcolor()[1]
         if color:
             self.colors[group] = color
-            for rect in self.rectangles:
-                if rect.group == group:
-                    rect.set_color(color)
+            for rect in self.groups[group]:
+                rect.set_color(color)
         self.update_group_dropdown()
 
     def change_group(self) -> None:
