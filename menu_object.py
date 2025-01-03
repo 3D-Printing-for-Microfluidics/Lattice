@@ -113,7 +113,7 @@ def tile(app: "App") -> None:
             for j in range(num_y):
                 x = x_start + i * x_spacing
                 y = y_start + j * y_spacing
-                rectangle = Rectangle(app, x, y, 100, 100)
+                rectangle = Rectangle(app, x, y, 100, 100, group)
                 rectangle.set_color(app.colors[group])
                 app.groups[group].append(rectangle)
         app.update_label(app.groups[group][-1])
