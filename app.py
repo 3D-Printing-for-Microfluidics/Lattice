@@ -278,3 +278,14 @@ class App:
             return
         text = f"X: {rect.x}, Y: {rect.y}, Width: {rect.width}, Height: {rect.height}, Group: {rect.group}"
         self.dimensions_label.config(text=text)
+
+
+def main() -> None:
+    """Run the Tkinter application."""
+    root = tk.Tk()
+    App(root)
+    root.mainloop()
+
+
+if __name__ == "__main__":
+    main()
