@@ -6,10 +6,10 @@ import logging
 import tkinter as tk
 from typing import TYPE_CHECKING
 
-from menu_arrange import align_bottom, align_left, align_right, align_top, set_x, set_y
-from menu_file import load_json, save_json
-from menu_group import change_group, delete_group, new_group, rename_group, set_group_color
-from menu_object import add_rectangle, delete_rectangle, tile
+from menus.arrange_menu import align_bottom, align_left, align_right, align_top, set_x, set_y
+from menus.file_menu import load_json, save_json
+from menus.group_menu import change_group, delete_group, new_group, rename_group, set_group_color
+from menus.object_menu import add_rectangle, delete_rectangle, tile
 
 if TYPE_CHECKING:
     from rectangle import Rectangle
