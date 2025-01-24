@@ -106,6 +106,54 @@ class App:
         arrange_menu.add_command(label="Align Top", command=lambda: align_top(self), accelerator="Ctrl+T")
         arrange_menu.add_command(label="Align Bottom", command=lambda: align_bottom(self), accelerator="Ctrl+B")
 
+    def update_group_dropdown(self) -> None:
+        """Update the group dropdown menu."""
+        self.group_menu.delete(0, "end")
+        self.group_menu.add_command(label="New Group", command=lambda: new_group(self), accelerator="Ctrl+G")
+        self.group_menu.add_command(label="Delete Group", command=lambda: delete_group(self))
+        self.group_menu.add_separator()
+        self.group_menu.add_command(label="- Groups -", state=tk.DISABLED)
+
+        self.color_boxes.clear()
+        for group in self.groups:
+            color = self.colors[group]
+            label = f"  {group}"
+            color_box = self.create_color_box(color)
+            self.color_boxes[group] = color_box
+            self.group_menu.add_radiobutton(
+                label=label,
+                variable=self.group_var,
+                value=group,
+                indicatoron=1,
+                compound=tk.LEFT,
+                image=color_box,
+            )
+
+        self.group_menu.add_command(label="Rename Group", command=lambda: rename_group(self))
+        self.group_menu.add_command(label="Change Group Color", command=lambda: set_group_color(self))
+        self.group_menu.add_command(label="Change Selection to Current Group", command=lambda: change_group(self))
+        if self.groups:
+            self.group_var.set(list(self.groups.keys())[-1])
+
+    def create_color_box(self, color: str) -> tk.PhotoImage:
+        """Create a small colored box for the group label.
+
+        Parameters
+        ----------
+        color : str
+            The color of the box.
+
+        Returns
+        -------
+        tk.PhotoImage
+            The image of the colored box.
+
+        """
+        size = 10
+        image = tk.PhotoImage(width=size, height=size)
+        image.put(color, to=(0, 0, size, size))
+        return image
+
     def bind_shortcuts(self) -> None:
         """Bind keyboard shortcuts."""
         self.root.bind_all("<Insert>", lambda _: add_rectangle(self))
@@ -124,6 +172,21 @@ class App:
         """Create the dimensions label."""
         self.dimensions_label = tk.Label(self.root, text="", bg="lightgray")
         self.dimensions_label.pack(side=tk.TOP, fill=tk.X)
+
+    def update_label(self, rect: Rectangle | None) -> None:
+        """Update the label with the dimensions and coordinates of the rectangle.
+
+        Parameters
+        ----------
+        rect : Rectangle | None
+            The rectangle whose information is to be displayed or None if no rectangle is selected.
+
+        """
+        if rect is None:
+            self.dimensions_label.config(text="")
+            return
+        text = f"X: {rect.x}, Y: {rect.y}, Width: {rect.width}, Height: {rect.height}, Group: {rect.group}"
+        self.dimensions_label.config(text=text)
 
     def create_canvas(self) -> None:
         """Create the canvas with scrollbars."""
@@ -210,74 +273,11 @@ class App:
         if self.selected_rectangles:
             self.update_label(self.selected_rectangles[0])
 
-    def update_group_dropdown(self) -> None:
-        """Update the group dropdown menu."""
-        self.group_menu.delete(0, "end")
-        self.group_menu.add_command(label="New Group", command=lambda: new_group(self), accelerator="Ctrl+G")
-        self.group_menu.add_command(label="Delete Group", command=lambda: delete_group(self))
-        self.group_menu.add_separator()
-        self.group_menu.add_command(label="- Groups -", state=tk.DISABLED)
-
-        self.color_boxes.clear()
-        for group in self.groups:
-            color = self.colors[group]
-            label = f"  {group}"
-            color_box = self.create_color_box(color)
-            self.color_boxes[group] = color_box
-            self.group_menu.add_radiobutton(
-                label=label,
-                variable=self.group_var,
-                value=group,
-                indicatoron=1,
-                compound=tk.LEFT,
-                image=color_box,
-            )
-
-        self.group_menu.add_command(label="Rename Group", command=lambda: rename_group(self))
-        self.group_menu.add_command(label="Change Group Color", command=lambda: set_group_color(self))
-        self.group_menu.add_command(label="Change Selection to Current Group", command=lambda: change_group(self))
-        if self.groups:
-            self.group_var.set(list(self.groups.keys())[-1])
-
-    def create_color_box(self, color: str) -> tk.PhotoImage:
-        """Create a small colored box for the group label.
-
-        Parameters
-        ----------
-        color : str
-            The color of the box.
-
-        Returns
-        -------
-        tk.PhotoImage
-            The image of the colored box.
-
-        """
-        size = 10
-        image = tk.PhotoImage(width=size, height=size)
-        image.put(color, to=(0, 0, size, size))
-        return image
-
     def deselect_all(self) -> None:
         """Deselect all rectangles."""
         for rect in self.selected_rectangles[:]:  # operate on a copy of the list since it will be modified
             rect.deselect()
         self.update_label(None)
-
-    def update_label(self, rect: Rectangle | None) -> None:
-        """Update the label with the dimensions and coordinates of the rectangle.
-
-        Parameters
-        ----------
-        rect : Rectangle | None
-            The rectangle whose information is to be displayed or None if no rectangle is selected.
-
-        """
-        if rect is None:
-            self.dimensions_label.config(text="")
-            return
-        text = f"X: {rect.x}, Y: {rect.y}, Width: {rect.width}, Height: {rect.height}, Group: {rect.group}"
-        self.dimensions_label.config(text=text)
 
 
 def main() -> None:
