@@ -222,6 +222,10 @@ class App:
         self.canvas_frame.pack_propagate(flag=False)
         self.canvas.pack_propagate(flag=False)
 
+    def clear_canvas(self) -> None:
+        """Clear all rectangles from the canvas."""
+        self.canvas.delete("all")
+
     def on_canvas_click(self, event: tk.Event) -> None:
         """Handle the click event on the canvas."""
         logger.debug("Click at (%d, %d)", event.x, event.y)

@@ -13,10 +13,16 @@ if TYPE_CHECKING:
 
 def save_json(app: "App") -> None:
     """Save the rectangles and colors to a JSON file."""
-    data = {
-        "rectangles": [rect.to_dict() for group in app.groups.values() for rect in group],
-        "colors": app.colors,
-    }
+    data = {}
+
+    for group_name, rects in app.groups.items():
+        data[group_name] = []
+        for rect in rects:
+            part_info = rect.to_dict()
+            part_info.pop("group", None)
+            data[group_name].append(part_info)
+    data["colors"] = app.colors
+
     filename = filedialog.asksaveasfilename(
         defaultextension=".json",
         initialfile="rectangles.json",
@@ -46,18 +52,14 @@ def load_json(app: "App") -> None:
         simpledialog.messagebox.showerror("Error", "Invalid JSON file.")
         return
 
-    for group in app.groups.values():
-        for rect in group:
-            rect.delete()
+    app.clear_canvas()
+    app.colors = data.pop("colors", {})
 
-    app.groups.clear()
-    app.colors = data.get("colors", {})
-    app.groups = {group: [] for group in app.colors}
-
-    for r in data.get("rectangles", []):
-        group = r["group"]
-        rectangle = Rectangle(app, r["x"], r["y"], r["width"], r["height"], group)
-        rectangle.set_color(app.colors[group])
-        app.groups[group].append(rectangle)
+    for group_name, group in data.items():
+        app.groups[group_name] = []
+        for r in group:
+            rectangle = Rectangle(app, group=group_name, **r)
+            rectangle.set_color(app.colors[group_name])
+            app.groups[group_name].append(rectangle)
 
     app.update_group_dropdown()
