@@ -14,14 +14,15 @@ if TYPE_CHECKING:
 def save_json(app: "App") -> None:
     """Save the rectangles and colors to a JSON file."""
     data = {}
+    data["groups"] = {}
+    data["colors"] = app.colors
 
     for group_name, rects in app.groups.items():
-        data[group_name] = []
+        data["groups"][group_name] = []
         for rect in rects:
             part_info = rect.to_dict()
             part_info.pop("group", None)
-            data[group_name].append(part_info)
-    data["colors"] = app.colors
+            data["groups"][group_name].append(part_info)
 
     filename = filedialog.asksaveasfilename(
         defaultextension=".json",
@@ -53,9 +54,10 @@ def load_json(app: "App") -> None:
         return
 
     app.clear_canvas()
-    app.colors = data.pop("colors", {})
+    app.colors = data.get("colors", {})
+    groups = data.get("groups", {})
 
-    for group_name, group in data.items():
+    for group_name, group in groups.items():
         app.groups[group_name] = []
         for r in group:
             rectangle = Rectangle(app, group=group_name, **r)
