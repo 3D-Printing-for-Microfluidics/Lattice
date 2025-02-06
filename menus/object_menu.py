@@ -3,7 +3,7 @@
 from tkinter import simpledialog
 from typing import TYPE_CHECKING
 
-from rectangle import Rectangle
+from component import Component
 
 if TYPE_CHECKING:
     from app import App
@@ -75,31 +75,38 @@ class TileDialog:
         self.top.destroy()
 
 
-def add_rectangle(app: "App") -> None:
-    """Add a new rectangle to the canvas."""
+def add_component(app: "App") -> None:
+    """Add a new component to the canvas.
+
+    Parameters
+    ----------
+    app : App
+        The application instance.
+
+    """
     group = app.group_var.get()
     if not group:
         simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
         return
-    x, y, width, height = 50, 50, 100, 100
-    rectangle = Rectangle(app, x, y, width, height, group)
-    rectangle.set_color(app.colors[group])
-    app.groups[group].append(rectangle)
+    x, y = 50, 50
+    component = Component(app, x, y, app.comp_width, app.comp_height, group)
+    component.set_color(app.colors[group])
+    app.groups[group].append(component)
     app.deselect_all()
-    rectangle.select()
-    app.update_label(rectangle)
+    component.select()
+    app.update_label(component)
 
 
-def delete_rectangle(app: "App") -> None:
-    """Delete the selected rectangles from the canvas."""
-    for rect in app.selected_rectangles:
-        app.groups[rect.group].remove(rect)
-        rect.delete()
-    app.selected_rectangles.clear()
+def delete_component(app: "App") -> None:
+    """Delete the selected components from the canvas."""
+    for comp in app.selected_components:
+        app.groups[comp.group].remove(comp)
+        comp.delete()
+    app.selected_components.clear()
 
 
 def tile(app: "App") -> None:
-    """Tile rectangles based on user input."""
+    """Tile components based on user input."""
     group = app.group_var.get()
     if not group:
         simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
@@ -113,7 +120,7 @@ def tile(app: "App") -> None:
             for j in range(num_y):
                 x = x_start + i * x_spacing
                 y = y_start + j * y_spacing
-                rectangle = Rectangle(app, x, y, 100, 100, group)
-                rectangle.set_color(app.colors[group])
-                app.groups[group].append(rectangle)
+                component = Component(app, x, y, app.comp_width, app.comp_height, group)
+                component.set_color(app.colors[group])
+                app.groups[group].append(component)
         app.update_label(app.groups[group][-1])

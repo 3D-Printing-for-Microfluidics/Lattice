@@ -1,4 +1,10 @@
-"""UI for 3D Print Dose Customization."""
+"""UI for 3D Print Dose Customization.
+
+TODO:
+- Make selection box respect canvas panning
+- Parameterize height,width
+
+"""
 
 from __future__ import annotations
 
@@ -9,10 +15,10 @@ from typing import TYPE_CHECKING
 from menus.arrange_menu import align_bottom, align_left, align_right, align_top, set_x, set_y
 from menus.file_menu import load_json, save_json
 from menus.group_menu import change_group, delete_group, new_group, rename_group, set_group_color
-from menus.object_menu import add_rectangle, delete_rectangle, tile
+from menus.object_menu import add_component, delete_component, tile
 
 if TYPE_CHECKING:
-    from rectangle import Rectangle
+    from component import Component
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -28,19 +34,19 @@ class App:
     button_bar : tk.Frame
         The frame containing the buttons.
     dimensions_label : tk.Label
-        The label displaying the dimensions and coordinates of the selected rectangle.
+        The label displaying the dimensions and coordinates of the selected component.
     canvas : tk.Canvas
-        The canvas on which rectangles are drawn.
-    selected_rectangles : list[Rectangle]
-        The list of selected rectangles.
-    groups : dict[str, list[Rectangle]]
-        The dictionary of groups and their rectangles.
+        The canvas on which components are drawn.
+    selection : list[Component]
+        The list of selected components.
+    groups : dict[str, list[Component]]
+        The dictionary of groups and their components.
     colors : dict[str, str]
         The dictionary of groups and their colors.
     color_boxes : dict[str, tk.PhotoImage]
         The dictionary of color box images.
     selection_rect : int | None
-        The ID of the selection rectangle on the canvas.
+        The ID of the selection component on the canvas.
 
     """
 
@@ -55,13 +61,15 @@ class App:
         """
         self.root = root
         self.root.title("3D Print Dose Customization")
-        self.selected_rectangles = []
+        self.comp_width = 100
+        self.comp_height = 100
+        self.selection = []
         self.groups = {}
         self.colors = {}
         self.color_boxes = {}
         self.selection_rect = None
-        self.start_x = None
-        self.start_y = None
+        self.selection_start_x = None
+        self.selection_start_y = None
         self.create_ui()
 
     def create_ui(self) -> None:
@@ -89,12 +97,12 @@ class App:
         self.group_var = tk.StringVar()
         self.update_group_dropdown()
 
-        rectangle_menu = tk.Menu(menu_bar, tearoff=0)
-        menu_bar.add_cascade(label="Object", menu=rectangle_menu)
-        rectangle_menu.add_command(label="Add", command=lambda: add_rectangle(self), accelerator="Insert")
-        rectangle_menu.add_command(label="Delete", command=lambda: delete_rectangle(self), accelerator="Delete")
-        rectangle_menu.add_separator()
-        rectangle_menu.add_command(label="Tile Create", command=lambda: tile(self))
+        component_menu = tk.Menu(menu_bar, tearoff=0)
+        menu_bar.add_cascade(label="Component", menu=component_menu)
+        component_menu.add_command(label="Add", command=lambda: add_component(self), accelerator="Insert")
+        component_menu.add_command(label="Delete", command=lambda: delete_component(self), accelerator="Delete")
+        component_menu.add_separator()
+        component_menu.add_command(label="Tile Create", command=lambda: tile(self))
 
         arrange_menu = tk.Menu(menu_bar, tearoff=0)
         menu_bar.add_cascade(label="Arrange", menu=arrange_menu)
@@ -156,8 +164,8 @@ class App:
 
     def bind_shortcuts(self) -> None:
         """Bind keyboard shortcuts."""
-        self.root.bind_all("<Insert>", lambda _: add_rectangle(self))
-        self.root.bind_all("<Delete>", lambda _: delete_rectangle(self))
+        self.root.bind_all("<Insert>", lambda _: add_component(self))
+        self.root.bind_all("<Delete>", lambda _: delete_component(self))
         self.root.bind_all("<Control-g>", lambda _: new_group(self))
         self.root.bind_all("<Control-o>", lambda _: load_json(self))
         self.root.bind_all("<Control-s>", lambda _: save_json(self))
@@ -173,19 +181,19 @@ class App:
         self.dimensions_label = tk.Label(self.root, text="", bg="lightgray")
         self.dimensions_label.pack(side=tk.TOP, fill=tk.X)
 
-    def update_label(self, rect: Rectangle | None) -> None:
-        """Update the label with the dimensions and coordinates of the rectangle.
+    def update_label(self, comp: Component | None) -> None:
+        """Update the label with the dimensions and coordinates of the component.
 
         Parameters
         ----------
-        rect : Rectangle | None
-            The rectangle whose information is to be displayed or None if no rectangle is selected.
+        comp : Component | None
+            The component whose information is to be displayed or None if no component is selected.
 
         """
-        if rect is None:
+        if comp is None:
             self.dimensions_label.config(text="")
             return
-        text = f"X: {rect.x}, Y: {rect.y}, Width: {rect.width}, Height: {rect.height}, Group: {rect.group}"
+        text = f"X: {comp.x}, Y: {comp.y}, Width: {comp.width}, Height: {comp.height}, Group: {comp.group}"
         self.dimensions_label.config(text=text)
 
     def create_canvas(self) -> None:
@@ -202,7 +210,7 @@ class App:
         self.canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Create the canvas with a fixed size and scroll region
-        self.canvas = tk.Canvas(self.canvas_frame, width=2000, height=1000, bg="white")
+        self.canvas = tk.Canvas(self.canvas_frame, width=2560, height=1600, bg="white")
         self.canvas.pack(side=tk.LEFT, fill=tk.NONE, expand=False)
 
         # Create scrollbars and attach them to the canvas
@@ -223,31 +231,31 @@ class App:
         self.canvas.pack_propagate(flag=False)
 
     def clear_canvas(self) -> None:
-        """Clear all rectangles from the canvas."""
+        """Clear all components from the canvas."""
         self.canvas.delete("all")
 
     def on_canvas_click(self, event: tk.Event) -> None:
         """Handle the click event on the canvas."""
         logger.debug("Click at (%d, %d)", event.x, event.y)
-        self.start_x = event.x
-        self.start_y = event.y
+        self.selection_start_x = event.x
+        self.selection_start_y = event.y
         if not self.canvas.find_withtag("current"):  # nothing was under cursor when clicked
             self.deselect_all()
             if self.selection_rect:
                 self.canvas.delete(self.selection_rect)
                 self.selection_rect = None
         else:
-            self.start_x = None
-            self.start_y = None
+            self.selection_start_x = None
+            self.selection_start_y = None
 
     def on_canvas_drag(self, event: tk.Event) -> None:
         """Handle the drag event on the canvas."""
-        if self.start_x is not None and self.start_y is not None:
+        if self.selection_start_x is not None and self.selection_start_y is not None:
             if self.selection_rect:
                 self.canvas.delete(self.selection_rect)
             self.selection_rect = self.canvas.create_rectangle(
-                self.start_x,
-                self.start_y,
+                self.selection_start_x,
+                self.selection_start_y,
                 event.x,
                 event.y,
                 outline="blue",
@@ -259,28 +267,28 @@ class App:
         logger.debug("Release at (%d, %d)", event.x, event.y)
         if self.selection_rect:
             x1, y1, x2, y2 = self.canvas.coords(self.selection_rect)
-            self.select_rectangles_in_area(x1, y1, x2, y2)
+            self.select_components_in_area(x1, y1, x2, y2)
             self.canvas.delete(self.selection_rect)
             self.selection_rect = None
 
-    def select_rectangles_in_area(self, x1: int, y1: int, x2: int, y2: int) -> None:
-        """Select all rectangles within the specified area."""
+    def select_components_in_area(self, x1: int, y1: int, x2: int, y2: int) -> None:
+        """Select all components within the specified area."""
         for group in self.groups.values():
-            for rect in group:
+            for comp in group:
                 if (
-                    rect.x >= min(x1, x2)
-                    and rect.x + rect.width <= max(x1, x2)
-                    and rect.y >= min(y1, y2)
-                    and rect.y + rect.height <= max(y1, y2)
+                    comp.x >= min(x1, x2)
+                    and comp.x + comp.width <= max(x1, x2)
+                    and comp.y >= min(y1, y2)
+                    and comp.y + comp.height <= max(y1, y2)
                 ):
-                    rect.select()
-        if self.selected_rectangles:
-            self.update_label(self.selected_rectangles[0])
+                    comp.select()
+        if self.selection:
+            self.update_label(self.selection[0])
 
     def deselect_all(self) -> None:
-        """Deselect all rectangles."""
-        for rect in self.selected_rectangles[:]:  # operate on a copy of the list since it will be modified
-            rect.deselect()
+        """Deselect all components."""
+        for comp in self.selection[:]:  # operate on a copy of the list since it will be modified
+            comp.deselect()
         self.update_label(None)
 
 

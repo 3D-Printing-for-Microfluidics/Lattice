@@ -5,28 +5,28 @@ from pathlib import Path
 from tkinter import filedialog, simpledialog
 from typing import TYPE_CHECKING
 
-from rectangle import Rectangle
+from component import Component
 
 if TYPE_CHECKING:
     from app import App
 
 
 def save_json(app: "App") -> None:
-    """Save the rectangles and colors to a JSON file."""
+    """Save the components and colors to a JSON file."""
     data = {}
     data["groups"] = {}
     data["colors"] = app.colors
 
-    for group_name, rects in app.groups.items():
+    for group_name, objs in app.groups.items():
         data["groups"][group_name] = []
-        for rect in rects:
-            part_info = rect.to_dict()
-            part_info.pop("group", None)
-            data["groups"][group_name].append(part_info)
+        for comp in objs:
+            comp_dict = comp.to_dict()
+            comp_dict.pop("group", None)  # no need to track group twice
+            data["groups"][group_name].append(comp_dict)
 
     filename = filedialog.asksaveasfilename(
         defaultextension=".json",
-        initialfile="rectangles.json",
+        initialfile="components.json",
         filetypes=[("JSON files", "*.json")],
     )
     if filename:
@@ -35,10 +35,10 @@ def save_json(app: "App") -> None:
 
 
 def load_json(app: "App") -> None:
-    """Load rectangles and colors from a JSON file."""
+    """Load components and colors from a JSON file."""
     filename = filedialog.askopenfilename(
         defaultextension=".json",
-        initialfile="rectangles.json",
+        initialfile="components.json",
         filetypes=[("JSON files", "*.json")],
     )
     if not filename:  # Dialog was closed without selecting a file
@@ -59,9 +59,9 @@ def load_json(app: "App") -> None:
 
     for group_name, group in groups.items():
         app.groups[group_name] = []
-        for r in group:
-            rectangle = Rectangle(app, group=group_name, **r)
-            rectangle.set_color(app.colors[group_name])
-            app.groups[group_name].append(rectangle)
+        for comp in group:
+            component = Component(app, group=group_name, **comp)
+            component.set_color(app.colors[group_name])
+            app.groups[group_name].append(component)
 
     app.update_group_dropdown()
