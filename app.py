@@ -1,10 +1,10 @@
 """UI for 3D Print Dose Customization.
 
 TODO:
-- Make selection box respect canvas panning
-- Parameterize height,width
-- Maybe use component selection for this?
+- Maybe use component selection for this? Put in file menu
+- Add options to file menu: load layout, save layout, generate new print file, load print file?
 - Add absolute vs. scale option for exposure scaling
+- Cutout tool for component selection?
 
 """
 
@@ -239,9 +239,11 @@ class App:
 
     def on_canvas_click(self, event: tk.Event) -> None:
         """Handle the click event on the canvas."""
-        logger.debug("Click at (%d, %d)", event.x, event.y)
-        self.selection_start_x = event.x
-        self.selection_start_y = event.y
+        x = self.canvas.canvasx(event.x)
+        y = self.canvas.canvasy(event.y)
+        logger.debug("Click at (%d, %d)", x, y)
+        self.selection_start_x = x
+        self.selection_start_y = y
         if not self.canvas.find_withtag("current"):  # nothing was under cursor when clicked
             self.deselect_all()
             if self.selection_rect:
@@ -253,21 +255,25 @@ class App:
 
     def on_canvas_drag(self, event: tk.Event) -> None:
         """Handle the drag event on the canvas."""
+        x = self.canvas.canvasx(event.x)
+        y = self.canvas.canvasy(event.y)
         if self.selection_start_x is not None and self.selection_start_y is not None:
             if self.selection_rect:
                 self.canvas.delete(self.selection_rect)
             self.selection_rect = self.canvas.create_rectangle(
                 self.selection_start_x,
                 self.selection_start_y,
-                event.x,
-                event.y,
+                x,
+                y,
                 outline="blue",
                 dash=(2, 2),
             )
 
     def on_canvas_release(self, event: tk.Event) -> None:
         """Handle the release event on the canvas."""
-        logger.debug("Release at (%d, %d)", event.x, event.y)
+        x = self.canvas.canvasx(event.x)
+        y = self.canvas.canvasy(event.y)
+        logger.debug("Release at (%d, %d)", x, y)
         if self.selection_rect:
             x1, y1, x2, y2 = self.canvas.coords(self.selection_rect)
             self.select_components_in_area(x1, y1, x2, y2)
