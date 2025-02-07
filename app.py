@@ -14,6 +14,7 @@ import logging
 import tkinter as tk
 from typing import TYPE_CHECKING
 
+from constants import CANVAS_HEIGHT, CANVAS_WIDTH
 from menus.arrange_menu import align_bottom, align_left, align_right, align_top, set_x, set_y
 from menus.file_menu import load_json, save_json
 from menus.group_menu import change_group, delete_group, new_group, rename_group, set_group_color
@@ -24,9 +25,6 @@ if TYPE_CHECKING:
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-CANVAS_X = 2560
-CANVAS_Y = 1600
 
 
 class App:
@@ -215,7 +213,7 @@ class App:
         self.canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Create the canvas with a fixed size and scroll region
-        self.canvas = tk.Canvas(self.canvas_frame, width=CANVAS_X, height=CANVAS_Y, bg="white")
+        self.canvas = tk.Canvas(self.canvas_frame, width=CANVAS_WIDTH, height=CANVAS_HEIGHT, bg="white")
         self.canvas.pack(side=tk.LEFT, fill=tk.NONE, expand=False)
 
         # Create scrollbars and attach them to the canvas
@@ -224,7 +222,7 @@ class App:
         self.h_scrollbar = tk.Scrollbar(self.root, orient=tk.HORIZONTAL, command=self.canvas.xview)
         self.h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
         self.canvas.config(xscrollcommand=self.h_scrollbar.set, yscrollcommand=self.v_scrollbar.set)
-        self.canvas.config(scrollregion=(0, 0, CANVAS_X, CANVAS_Y))
+        self.canvas.config(scrollregion=(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT))
 
         # Bind events to the canvas
         self.canvas.bind("<Button-1>", self.on_canvas_click)

@@ -1,9 +1,7 @@
 """Generate a new print flie with scaled exposure settings and composite images.
 
 TODO:
-- Keep all default print settings
-- Scale default layer settings
--Keep all other layer settings that are currently being deleted
+- Read from and write to zip files
 """
 
 import copy
@@ -12,7 +10,7 @@ from pathlib import Path
 
 from PIL import Image, ImageChops
 
-exp_time_key = "Layer exposure time (ms)"
+from constants import CANVAS_HEIGHT, CANVAS_WIDTH
 
 
 def generate_new_print_file(input_dir: str, output_dir: str, config_file: str) -> None:
@@ -34,6 +32,8 @@ def generate_new_print_file(input_dir: str, output_dir: str, config_file: str) -
     new_print_settings_file = Path(output_dir) / "print_settings.json"
     new_images_dir = Path(output_dir) / "slices"
     new_images_dir.mkdir(parents=True, exist_ok=True)
+
+    exp_time_key = "Layer exposure time (ms)"
 
     with print_settings_file.open() as f:
         original_json = json.load(f)
@@ -59,7 +59,7 @@ def generate_new_print_file(input_dir: str, output_dir: str, config_file: str) -
             # For each image in the layer
             for img_info in original_imgs:
                 # Compose a new 2560x1600 image, black background
-                composite = Image.new("L", (2560, 1600), color=0)
+                composite = Image.new("L", (CANVAS_WIDTH, CANVAS_HEIGHT), color=0)
                 source_path = img_info["Image file"]
                 base_img = Image.open(f"{input_images_dir}/{source_path}").convert("L")
 
@@ -67,7 +67,7 @@ def generate_new_print_file(input_dir: str, output_dir: str, config_file: str) -
                 for part in parts:
                     offset_x = part["x"]
                     offset_y = part["y"]
-                    temp_img = Image.new("L", (2560, 1600), color=0)
+                    temp_img = Image.new("L", (CANVAS_WIDTH, CANVAS_HEIGHT), color=0)
                     temp_img.paste(base_img, (offset_x, offset_y))
                     composite = ImageChops.lighter(composite, temp_img)
 
