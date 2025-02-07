@@ -3,6 +3,8 @@
 TODO:
 - Make selection box respect canvas panning
 - Parameterize height,width
+- Maybe use component selection for this?
+- Add absolute vs. scale option for exposure scaling
 
 """
 
@@ -22,6 +24,9 @@ if TYPE_CHECKING:
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+CANVAS_X = 2560
+CANVAS_Y = 1600
 
 
 class App:
@@ -210,7 +215,7 @@ class App:
         self.canvas_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Create the canvas with a fixed size and scroll region
-        self.canvas = tk.Canvas(self.canvas_frame, width=2560, height=1600, bg="white")
+        self.canvas = tk.Canvas(self.canvas_frame, width=CANVAS_X, height=CANVAS_Y, bg="white")
         self.canvas.pack(side=tk.LEFT, fill=tk.NONE, expand=False)
 
         # Create scrollbars and attach them to the canvas
@@ -219,7 +224,7 @@ class App:
         self.h_scrollbar = tk.Scrollbar(self.root, orient=tk.HORIZONTAL, command=self.canvas.xview)
         self.h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
         self.canvas.config(xscrollcommand=self.h_scrollbar.set, yscrollcommand=self.v_scrollbar.set)
-        self.canvas.config(scrollregion=(0, 0, 2000, 1000))
+        self.canvas.config(scrollregion=(0, 0, CANVAS_X, CANVAS_Y))
 
         # Bind events to the canvas
         self.canvas.bind("<Button-1>", self.on_canvas_click)
