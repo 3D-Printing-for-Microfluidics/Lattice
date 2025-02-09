@@ -2,7 +2,7 @@
 
 TODO:
 - Maybe use component selection for this? Put in file menu
-- Add options to file menu: load layout, save layout, generate new print file, load print file?
+- Add options to file menu: load layout, save layout, generate new print file, load component (from a zip file)?
 - Add absolute vs. scale option for exposure scaling
 - Cutout tool for component selection?
 - Only allow floats in group names

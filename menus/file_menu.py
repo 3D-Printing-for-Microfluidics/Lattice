@@ -3,10 +3,11 @@
 import json
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, simpledialog
+from tkinter import filedialog, messagebox, simpledialog
 from typing import TYPE_CHECKING
 
 from component import Component
+from gen_new_print_file import new_print_file
 
 if TYPE_CHECKING:
     from app import App
@@ -36,8 +37,10 @@ class FileMenu:
         self.app = app
         file_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Open", command=self.load_json, accelerator="Ctrl+O")
-        file_menu.add_command(label="Save", command=self.save_json, accelerator="Ctrl+S")
+        file_menu.add_command(label="Open Layout", command=self.load_json, accelerator="Ctrl+O")
+        file_menu.add_command(label="Save Layout", command=self.save_json, accelerator="Ctrl+S")
+        file_menu.add_separator()
+        file_menu.add_command(label="Generate print file", command=self.generate_print_file)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.app.root.quit)
 
@@ -45,22 +48,25 @@ class FileMenu:
         self.app.root.bind_all("<Control-o>", lambda _: self.load_json())
         self.app.root.bind_all("<Control-s>", lambda _: self.save_json())
 
-    def save_json(self) -> None:
-        """Save the components and colors to a JSON file."""
+    def get_layout_data(self) -> dict:
+        """Return the current groups and colors as a dictionary."""
         data = {}
         data["groups"] = {}
         data["colors"] = self.app.colors
-
         for group_name, objs in self.app.groups.items():
             data["groups"][group_name] = []
             for comp in objs:
                 comp_dict = comp.to_dict()
                 comp_dict.pop("group", None)
                 data["groups"][group_name].append(comp_dict)
+        return data
 
+    def save_json(self) -> None:
+        """Save the components and colors to a JSON file."""
+        data = self.get_layout_data()
         filename = filedialog.asksaveasfilename(
             defaultextension=".json",
-            initialfile="components.json",
+            initialfile="layout.json",
             filetypes=[("JSON files", "*.json")],
         )
         if filename:
@@ -71,7 +77,7 @@ class FileMenu:
         """Load components and colors from a JSON file."""
         filename = filedialog.askopenfilename(
             defaultextension=".json",
-            initialfile="components.json",
+            initialfile="layout.json",
             filetypes=[("JSON files", "*.json")],
         )
         if not filename:
@@ -98,3 +104,27 @@ class FileMenu:
                 self.app.groups[group_name].append(component)
 
         self.app.group_menu.update_dropdown()
+
+    def generate_print_file(self) -> None:
+        """Generate a new print file with scaled exposure settings and composite images."""
+        input_path = filedialog.askopenfilename(
+            title="Select input zip",
+            filetypes=[("Zip", "*.zip"), ("All files", "*.*")],
+        )
+        if not input_path:
+            return
+
+        output_path = filedialog.asksaveasfilename(
+            title="Save print file",
+            defaultextension=".zip",
+            filetypes=[("Zip", "*.zip"), ("All files", "*.*")],
+        )
+        if not output_path:
+            return
+
+        try:
+            data = self.get_layout_data().get("groups", {})
+            new_print_file(Path(input_path), Path(output_path), data)
+            messagebox.showinfo("Success", f"Print file saved to:\n{output_path}")
+        except Exception as e:
+            messagebox.showerror("Error", str(e))
