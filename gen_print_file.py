@@ -1,8 +1,4 @@
-"""Generate a new print flie with scaled exposure settings and composite images.
-
-TODO:
-- Integrate with GUI
-"""
+"""Generate a new print flie with scaled exposure settings and composite images."""
 
 import copy
 import io
@@ -41,7 +37,7 @@ def compose_group_image(base_image: Image.Image, group_settings: list[dict]) -> 
     base_image : Image.Image
         The base image to copy for each part.
     group_settings : list[dict]
-        List of dictionaries containing 'x' and 'y' offsets.
+        List of dictionaries containing 'x' and 'y' offsets where the base image should be placed.
 
     Returns
     -------
@@ -104,18 +100,16 @@ def generate_layer_composites(
 def new_print_file(input_path: Path, output_path: Path, layout_data: dict) -> None:
     """Generate a new print file with scaled exposure settings and composite images, using layout_data.
 
-    Zip file must contain:
+    Input zip file must contain:
       - print_settings.json
       - a "slices" folder of images
 
     Parameters
     ----------
     input_path : Path
-        If this is a .zip, read print_settings.json and slices from inside the zip.
-        Otherwise, read from a directory containing the same structure.
+        Path to the input component .zip file.
     output_path : Path
-        If a .zip, write the new print_settings.json and new slices folder into this output zip.
-        Otherwise, write them to a directory.
+        Path for the output .zip file.
     layout_data : dict
         Dictionary containing group definitions.
 
@@ -123,7 +117,7 @@ def new_print_file(input_path: Path, output_path: Path, layout_data: dict) -> No
     if input_path.suffix.lower() != ".zip":
         msg = "Input path must be a .zip file."
         raise ValueError(msg)
-    generated_files = []
+    generated_files = {}
     with zipfile.ZipFile(input_path, "r") as zf:
         with zf.open("print_settings.json") as f:
             original_print_settings = json.load(f)
@@ -135,7 +129,7 @@ def new_print_file(input_path: Path, output_path: Path, layout_data: dict) -> No
 
     with zipfile.ZipFile(output_path, "w") as out_zip:
         out_zip.writestr("print_settings.json", json.dumps(new_json, indent=2))
-        for filename, content in generated_files:
+        for filename, content in generated_files.items():
             out_zip.writestr(f"slices/{filename}", content.getvalue())
 
 
@@ -143,7 +137,7 @@ def generate_layer_composites_zip(
     layer_dict: dict,
     exposure_config: dict,
     zf: zipfile.ZipFile,
-    generated_files: list,
+    generated_files: dict,
 ) -> None:
     """Generate new image settings for each group and updates the layer_dict.
 
@@ -155,8 +149,8 @@ def generate_layer_composites_zip(
         Exposure configuration to determine offsets and exposure scaling.
     zf : zipfile.ZipFile
         The input zip file.
-    generated_files : list
-        List of tuples containing the filename and BytesIO of the generated images.
+    generated_files : dict
+        Dictionary mapping the filename to BytesIO of the generated images.
 
     """
     original_settings = layer_dict.get("Image settings list", [])
@@ -177,7 +171,7 @@ def generate_layer_composites_zip(
             img_bytes = io.BytesIO()
             composite_img.save(img_bytes, format=ext.upper())
             img_bytes.seek(0)  # reset pointer for later reading
-            generated_files.append((out_filename, img_bytes))
+            generated_files[out_filename] = img_bytes
 
             new = copy.deepcopy(old)
             new["Image file"] = out_filename

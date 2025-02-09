@@ -1,17 +1,17 @@
 """UI for 3D Print Dose Customization.
 
 TODO:
-- Maybe use component selection for this? Put in file menu
-- Add options to file menu: load layout, save layout, generate new print file, load component (from a zip file)?
+- Add load component to file menu?
 - Add absolute vs. scale option for exposure scaling
-- Cutout tool for component selection?
 - Only allow floats in group names
+- Cutout tool for component selection?
 """
 
 from __future__ import annotations
 
 import logging
 import tkinter as tk
+from tkinter import filedialog, messagebox
 from typing import TYPE_CHECKING
 
 from constants import CANVAS_HEIGHT, CANVAS_WIDTH
@@ -56,16 +56,20 @@ class App:
         Displays information about the selected component.
     canvas : tk.Canvas
         The canvas on which components are drawn.
+    component_file : str
+        The path to the zip file containing the component.
 
     """
 
-    def __init__(self, root: tk.Tk) -> None:
+    def __init__(self, root: tk.Tk, component_file: str) -> None:
         """Initialize the App.
 
         Parameters
         ----------
         root : tk.Tk
             The root window of the Tkinter application.
+        component_file : str
+            The path to the zip file containing the component.
 
         """
         self.root = root
@@ -79,6 +83,7 @@ class App:
         self.selection_rect = None
         self.selection_start_x = None
         self.selection_start_y = None
+        self.component_file = component_file
 
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
@@ -213,8 +218,13 @@ class App:
 
 def main() -> None:
     """Run the Tkinter application."""
+    messagebox.showinfo("Select Component", "Please select a component zip file to begin.")
+    component_file = filedialog.askopenfilename(title="Select component zip file.", filetypes=[("Zip", "*.zip")])
+    if not component_file:
+        return
+
     root = tk.Tk()
-    App(root)
+    app = App(root, component_file)
     root.mainloop()
 
 

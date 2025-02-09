@@ -7,7 +7,7 @@ from tkinter import filedialog, messagebox, simpledialog
 from typing import TYPE_CHECKING
 
 from component import Component
-from gen_new_print_file import new_print_file
+from gen_print_file import new_print_file
 
 if TYPE_CHECKING:
     from app import App
@@ -107,13 +107,7 @@ class FileMenu:
 
     def generate_print_file(self) -> None:
         """Generate a new print file with scaled exposure settings and composite images."""
-        input_path = filedialog.askopenfilename(
-            title="Select input zip",
-            filetypes=[("Zip", "*.zip"), ("All files", "*.*")],
-        )
-        if not input_path:
-            return
-
+        input_path = self.app.component_file
         output_path = filedialog.asksaveasfilename(
             title="Save print file",
             defaultextension=".zip",
