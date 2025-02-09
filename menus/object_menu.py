@@ -1,14 +1,13 @@
 """App methods in the Object menu."""
 
-from tkinter import simpledialog
+import tkinter as tk
+from tkinter import messagebox, simpledialog
 from typing import TYPE_CHECKING
 
 from component import Component
 
 if TYPE_CHECKING:
     from app import App
-
-import tkinter as tk
 
 
 class TileDialog:
@@ -66,7 +65,7 @@ class TileDialog:
             num_y = int(self.num_y.get())
             self.result = (x_start, y_start, x_spacing, y_spacing, num_x, num_y)
         except ValueError:
-            tk.messagebox.showerror("Error", "Please enter valid integers.")
+            messagebox.showerror("Error", "Please enter valid integers.")
             return
         self.top.destroy()
 
@@ -75,52 +74,76 @@ class TileDialog:
         self.top.destroy()
 
 
-def add_component(app: "App") -> None:
-    """Add a new component to the canvas.
+class ObjectMenu:
+    """Create and handle the Component (Object) menu and its actions.
 
-    Parameters
+    Attributes
     ----------
     app : App
-        The application instance.
+        The parent application instance.
 
     """
-    group = app.group_var.get()
-    if not group:
-        simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
-        return
-    x, y = 50, 50
-    component = Component(app, x, y, app.comp_width, app.comp_height, group)
-    component.set_color(app.colors[group])
-    app.groups[group].append(component)
-    app.deselect_all()
-    component.select()
-    app.update_label(component)
 
+    def __init__(self, app: "App", menubar: tk.Menu) -> None:
+        """Initialize the ObjectMenu class.
 
-def delete_component(app: "App") -> None:
-    """Delete the selected components from the canvas."""
-    for comp in app.selected_components:
-        app.groups[comp.group].remove(comp)
-        comp.delete()
-    app.selected_components.clear()
+        Parameters
+        ----------
+        app : App
+            The application instance.
+        menubar : tk.Menu
+            The Tkinter menubar to which the Component menu is added.
 
+        """
+        self.app = app
+        menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Component", menu=menu)
+        menu.add_command(label="Add", command=self.add_component, accelerator="Insert")
+        menu.add_command(label="Delete", command=self.delete_component, accelerator="Delete")
+        menu.add_separator()
+        menu.add_command(label="Tile Create", command=self.tile)
 
-def tile(app: "App") -> None:
-    """Tile components based on user input."""
-    group = app.group_var.get()
-    if not group:
-        simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
-        return
+        # Bind shortcuts here
+        self.app.root.bind_all("<Insert>", lambda _: self.add_component())
+        self.app.root.bind_all("<Delete>", lambda _: self.delete_component())
 
-    dialog = TileDialog(app.root)
-    app.root.wait_window(dialog.top)
-    if dialog.result:
-        x_start, y_start, x_spacing, y_spacing, num_x, num_y = dialog.result
-        for i in range(num_x):
-            for j in range(num_y):
-                x = x_start + i * x_spacing
-                y = y_start + j * y_spacing
-                component = Component(app, x, y, app.comp_width, app.comp_height, group)
-                component.set_color(app.colors[group])
-                app.groups[group].append(component)
-        app.update_label(app.groups[group][-1])
+    def add_component(self) -> None:
+        """Add a new component to the canvas."""
+        group = self.app.group_menu.current_group.get()
+        if not group:
+            simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
+            return
+        x, y = 50, 50
+        comp = Component(self.app, x, y, self.app.comp_width, self.app.comp_height, group)
+        comp.set_color(self.app.colors[group])
+        self.app.groups[group].append(comp)
+        self.app.deselect_all()
+        comp.select()
+        self.app.update_label(comp)
+
+    def delete_component(self) -> None:
+        """Delete the selected components from the canvas."""
+        for comp in self.app.selection:
+            self.app.groups[comp.group].remove(comp)
+            comp.delete()
+        self.app.selection.clear()
+
+    def tile(self) -> None:
+        """Tile components based on user input."""
+        group = self.app.group_menu.current_group.get()
+        if not group:
+            simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
+            return
+
+        dialog = TileDialog(self.app.root)
+        self.app.root.wait_window(dialog.top)
+        if dialog.result:
+            x_start, y_start, x_spacing, y_spacing, num_x, num_y = dialog.result
+            for i in range(num_x):
+                for j in range(num_y):
+                    x = x_start + i * x_spacing
+                    y = y_start + j * y_spacing
+                    comp = Component(self.app, x, y, self.app.comp_width, self.app.comp_height, group)
+                    comp.set_color(self.app.colors[group])
+                    self.app.groups[group].append(comp)
+            self.app.update_label(self.app.groups[group][-1])

@@ -5,7 +5,7 @@ TODO:
 - Add options to file menu: load layout, save layout, generate new print file, load print file?
 - Add absolute vs. scale option for exposure scaling
 - Cutout tool for component selection?
-
+- Only allow floats in group names
 """
 
 from __future__ import annotations
@@ -15,10 +15,10 @@ import tkinter as tk
 from typing import TYPE_CHECKING
 
 from constants import CANVAS_HEIGHT, CANVAS_WIDTH
-from menus.arrange_menu import align_bottom, align_left, align_right, align_top, set_x, set_y
-from menus.file_menu import load_json, save_json
-from menus.group_menu import change_group, delete_group, new_group, rename_group, set_group_color
-from menus.object_menu import add_component, delete_component, tile
+from menus.arrange_menu import ArrangeMenu
+from menus.file_menu import FileMenu
+from menus.group_menu import GroupMenu
+from menus.object_menu import ObjectMenu
 
 if TYPE_CHECKING:
     from component import Component
@@ -34,12 +34,10 @@ class App:
     ----------
     root : tk.Tk
         The root window of the Tkinter application.
-    button_bar : tk.Frame
-        The frame containing the buttons.
-    dimensions_label : tk.Label
-        The label displaying the dimensions and coordinates of the selected component.
-    canvas : tk.Canvas
-        The canvas on which components are drawn.
+    comp_width : int
+        The default width for newly created components.
+    comp_height : int
+        The default height for newly created components.
     selection : list[Component]
         The list of selected components.
     groups : dict[str, list[Component]]
@@ -49,7 +47,15 @@ class App:
     color_boxes : dict[str, tk.PhotoImage]
         The dictionary of color box images.
     selection_rect : int | None
-        The ID of the selection component on the canvas.
+        The ID of the selection rectangle on the canvas.
+    selection_start_x : float | None
+        The X coordinate where a drag-selection started.
+    selection_start_y : float | None
+        The Y coordinate where a drag-selection started.
+    dimensions_label : tk.Label
+        Displays information about the selected component.
+    canvas : tk.Canvas
+        The canvas on which components are drawn.
 
     """
 
@@ -73,111 +79,15 @@ class App:
         self.selection_rect = None
         self.selection_start_x = None
         self.selection_start_y = None
-        self.create_ui()
 
-    def create_ui(self) -> None:
-        """Create the base UI."""
-        self.create_menu_bar()
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+        self.file_menu = FileMenu(self, menubar)
+        self.group_menu = GroupMenu(self, menubar)
+        self.object_menu = ObjectMenu(self, menubar)
+        self.arrange_menu = ArrangeMenu(self, menubar)
         self.create_label()
         self.create_canvas()
-        self.bind_shortcuts()
-
-    def create_menu_bar(self) -> None:
-        """Create the menu bar."""
-        menu_bar = tk.Menu(self.root)
-        self.root.config(menu=menu_bar)
-
-        file_menu = tk.Menu(menu_bar, tearoff=0)
-        menu_bar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Open", command=lambda: load_json(self), accelerator="Ctrl+O")
-        file_menu.add_command(label="Save", command=lambda: save_json(self), accelerator="Ctrl+S")
-        file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self.root.quit)
-
-        self.group_menu = tk.Menu(menu_bar, tearoff=0)
-        menu_bar.add_cascade(label="Group", menu=self.group_menu)
-
-        self.group_var = tk.StringVar()
-        self.update_group_dropdown()
-
-        component_menu = tk.Menu(menu_bar, tearoff=0)
-        menu_bar.add_cascade(label="Component", menu=component_menu)
-        component_menu.add_command(label="Add", command=lambda: add_component(self), accelerator="Insert")
-        component_menu.add_command(label="Delete", command=lambda: delete_component(self), accelerator="Delete")
-        component_menu.add_separator()
-        component_menu.add_command(label="Tile Create", command=lambda: tile(self))
-
-        arrange_menu = tk.Menu(menu_bar, tearoff=0)
-        menu_bar.add_cascade(label="Arrange", menu=arrange_menu)
-        arrange_menu.add_command(label="Set X", command=lambda: set_x(self), accelerator="Ctrl+X")
-        arrange_menu.add_command(label="Set Y", command=lambda: set_y(self), accelerator="Ctrl+Y")
-        arrange_menu.add_separator()
-        arrange_menu.add_command(label="Align Left", command=lambda: align_left(self), accelerator="Ctrl+L")
-        arrange_menu.add_command(label="Align Right", command=lambda: align_right(self), accelerator="Ctrl+R")
-        arrange_menu.add_command(label="Align Top", command=lambda: align_top(self), accelerator="Ctrl+T")
-        arrange_menu.add_command(label="Align Bottom", command=lambda: align_bottom(self), accelerator="Ctrl+B")
-
-    def update_group_dropdown(self) -> None:
-        """Update the group dropdown menu."""
-        self.group_menu.delete(0, "end")
-        self.group_menu.add_command(label="New Group", command=lambda: new_group(self), accelerator="Ctrl+G")
-        self.group_menu.add_command(label="Delete Group", command=lambda: delete_group(self))
-        self.group_menu.add_separator()
-        self.group_menu.add_command(label="- Groups -", state=tk.DISABLED)
-
-        self.color_boxes.clear()
-        for group in self.groups:
-            color = self.colors[group]
-            label = f"  {group}"
-            color_box = self.create_color_box(color)
-            self.color_boxes[group] = color_box
-            self.group_menu.add_radiobutton(
-                label=label,
-                variable=self.group_var,
-                value=group,
-                indicatoron=1,
-                compound=tk.LEFT,
-                image=color_box,
-            )
-
-        self.group_menu.add_command(label="Rename Group", command=lambda: rename_group(self))
-        self.group_menu.add_command(label="Change Group Color", command=lambda: set_group_color(self))
-        self.group_menu.add_command(label="Change Selection to Current Group", command=lambda: change_group(self))
-        if self.groups:
-            self.group_var.set(list(self.groups.keys())[-1])
-
-    def create_color_box(self, color: str) -> tk.PhotoImage:
-        """Create a small colored box for the group label.
-
-        Parameters
-        ----------
-        color : str
-            The color of the box.
-
-        Returns
-        -------
-        tk.PhotoImage
-            The image of the colored box.
-
-        """
-        size = 10
-        image = tk.PhotoImage(width=size, height=size)
-        image.put(color, to=(0, 0, size, size))
-        return image
-
-    def bind_shortcuts(self) -> None:
-        """Bind keyboard shortcuts."""
-        self.root.bind_all("<Insert>", lambda _: add_component(self))
-        self.root.bind_all("<Delete>", lambda _: delete_component(self))
-        self.root.bind_all("<Control-g>", lambda _: new_group(self))
-        self.root.bind_all("<Control-o>", lambda _: load_json(self))
-        self.root.bind_all("<Control-s>", lambda _: save_json(self))
-        self.root.bind_all("<Control-x>", lambda _: set_x(self))
-        self.root.bind_all("<Control-y>", lambda _: set_y(self))
-        self.root.bind_all("<Control-l>", lambda _: align_left(self))
-        self.root.bind_all("<Control-r>", lambda _: align_right(self))
-        self.root.bind_all("<Control-t>", lambda _: align_top(self))
-        self.root.bind_all("<Control-b>", lambda _: align_bottom(self))
 
     def create_label(self) -> None:
         """Create the dimensions label."""
