@@ -13,82 +13,118 @@ from PIL import Image, ImageChops
 from constants import CANVAS_HEIGHT, CANVAS_WIDTH
 
 
-def generate_new_print_file(input_dir: str, output_dir: str, config_file: str) -> None:
+def load_json(filepath: str) -> dict:
+    """Load and return JSON data from the given filepath.
+
+    Parameters
+    ----------
+    filepath : str
+        The path to the JSON file.
+
+    Returns
+    -------
+    dict
+        Parsed JSON content as a dictionary.
+
+    """
+    with Path(filepath).open() as f:
+        return json.load(f)
+
+
+def compose_group_image(base_image: Image.Image, group_settings: list[dict]) -> Image.Image:
+    """Create a composite image by placing the base image in multiple positions based on group_settings.
+
+    Parameters
+    ----------
+    base_image : Image.Image
+        The base image to copy for each part.
+    group_settings : list[dict]
+        List of dictionaries containing 'x' and 'y' offsets.
+
+    Returns
+    -------
+    Image.Image
+        The composite image combining all parts.
+
+    """
+    composite_image = Image.new("L", (CANVAS_WIDTH, CANVAS_HEIGHT), color=0)
+    for component in group_settings:
+        offset_x = component["x"]
+        offset_y = component["y"]
+        temp_img = Image.new("L", (CANVAS_WIDTH, CANVAS_HEIGHT), color=0)
+        temp_img.paste(base_image, (offset_x, offset_y))
+        composite_image = ImageChops.lighter(composite_image, temp_img)
+    return composite_image
+
+
+def generate_layer_composites(
+    layer_dict: dict,
+    exposure_config: dict,
+    input_images_dir: Path,
+    output_dir: Path,
+) -> None:
+    """Generate new image settings for each group and updates the layer_dict.
+
+    Parameters
+    ----------
+    layer_dict : dict
+        Dictionary representing layer settings.
+    exposure_config : dict
+        Exposure configuration to determine offsets and exposure scaling.
+    input_images_dir : Path
+        Path to the directory containing input images.
+    output_dir : Path
+        Path to the directory where new images will be saved.
+
+    """
+    new_image_settings = []
+    original_settings = layer_dict.get("Image settings list", [])
+
+    for group_name, group_settings in exposure_config.items():
+        exp_scale = float(group_name) / 100.0
+
+        for old in original_settings:
+            img_name = old["Image file"]
+            original_img = Image.open(f"{input_images_dir}/{img_name}").convert("L")
+            composite_img = compose_group_image(original_img, group_settings)
+            new_name, ext = img_name.rsplit(".", 1)
+            out_filename = f"{new_name}_{group_name}.{ext}"
+            composite_img.save(f"{output_dir}/{out_filename}")
+            new = copy.deepcopy(old)
+            new["Image file"] = out_filename
+
+            if "Layer exposure time (ms)" in new:
+                new["Layer exposure time (ms)"] = int(new["Layer exposure time (ms)"] * exp_scale)
+            new_image_settings.append(new)
+    layer_dict["Image settings list"] = new_image_settings
+
+
+def new_print_file(input_dir: Path, output_dir: Path, config_file: Path) -> None:
     """Generate a new print file with scaled exposure settings and composite images.
 
     Parameters
     ----------
-    input_dir : str
+    input_dir : Path
         Input directory containing the original print settings and images.
-    output_dir : str
+    output_dir : Path
         Output directory for the new print settings and images.
-    config_file : str
+    config_file : Path
         Path to the JSON file containing the group definitions.
 
     """
-    print_settings_file = Path(input_dir) / "print_settings.json"
-    input_images_dir = Path(input_dir) / "slices"
+    print_settings_file = input_dir / "print_settings.json"
+    input_images_dir = input_dir / "slices"
 
-    new_print_settings_file = Path(output_dir) / "print_settings.json"
-    new_images_dir = Path(output_dir) / "slices"
-    new_images_dir.mkdir(parents=True, exist_ok=True)
+    new_print_settings_file = output_dir / "print_settings.json"
+    output_dir = output_dir / "slices"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
-    exp_time_key = "Layer exposure time (ms)"
+    original_print_settings = load_json(print_settings_file)
+    new_json = copy.deepcopy(original_print_settings)
+    exposure_config = load_json(config_file).get("groups", {})
 
-    with print_settings_file.open() as f:
-        original_json = json.load(f)
-
-    # Make a complete copy so all non-layer fields remain intact
-    new_json = copy.deepcopy(original_json)
-
-    # Retrieve group info from the same structure or another location if needed
-    with Path(config_file).open() as f:
-        dose_config = json.load(f).get("groups", {})
-
-    # Iterate over each layer, modifying only the Image settings
-    for layer in new_json.get("Layers", []):
-        new_image_settings = []
-
-        # Original “Image settings list”
-        original_imgs = layer.get("Image settings list", [])
-
-        # For each group, generate a composite image
-        for group_name, parts in dose_config.items():
-            scale_factor = float(group_name) / 100.0
-
-            # For each image in the layer
-            for img_info in original_imgs:
-                # Compose a new 2560x1600 image, black background
-                composite = Image.new("L", (CANVAS_WIDTH, CANVAS_HEIGHT), color=0)
-                source_path = img_info["Image file"]
-                base_img = Image.open(f"{input_images_dir}/{source_path}").convert("L")
-
-                # Place base_img in all positions for this group
-                for part in parts:
-                    offset_x = part["x"]
-                    offset_y = part["y"]
-                    temp_img = Image.new("L", (CANVAS_WIDTH, CANVAS_HEIGHT), color=0)
-                    temp_img.paste(base_img, (offset_x, offset_y))
-                    composite = ImageChops.lighter(composite, temp_img)
-
-                # Save composite under a new name
-                name, ext = source_path.rsplit(".", 1)
-                out_filename = f"{name}_{group_name}.{ext}"
-                composite.save(f"{new_images_dir}/{out_filename}")
-
-                # Deep-copy original image settings to preserve anything else
-                new_img_info = copy.deepcopy(img_info)
-                new_img_info["Image file"] = out_filename
-
-                # Scale the exposure time if present
-                if exp_time_key in new_img_info:
-                    new_time = int(new_img_info[exp_time_key] * scale_factor)
-                    new_img_info[exp_time_key] = new_time
-
-                new_image_settings.append(new_img_info)
-
-        # Replace just the image settings for this layer
-        layer["Image settings list"] = new_image_settings
+    for layer_dict in new_json.get("Layers", []):
+        generate_layer_composites(layer_dict, exposure_config, input_images_dir, output_dir)
 
     with new_print_settings_file.open("w") as out:
         json.dump(new_json, out, indent=2)
@@ -96,10 +132,10 @@ def generate_new_print_file(input_dir: str, output_dir: str, config_file: str) -
 
 def main() -> None:
     """Generate a new print file with scaled exposure settings and composite images."""
-    generate_new_print_file(
-        input_dir="test_files/small_test",
-        output_dir="test_files/small_test_result",
-        config_file="json/components.json",
+    new_print_file(
+        input_dir=Path("test_files/small_test"),
+        output_dir=Path("test_files/small_test_result"),
+        config_file=Path("json/components.json"),
     )
 
 
