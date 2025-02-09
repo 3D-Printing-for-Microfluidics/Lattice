@@ -2,10 +2,13 @@
 
 TODO:
 - Read from and write to zip files
+- Integrate with GUI
 """
 
 import copy
+import io
 import json
+import zipfile
 from pathlib import Path
 
 from PIL import Image, ImageChops
@@ -13,12 +16,12 @@ from PIL import Image, ImageChops
 from constants import CANVAS_HEIGHT, CANVAS_WIDTH
 
 
-def load_json(filepath: str) -> dict:
+def load_json(filepath: Path) -> dict:
     """Load and return JSON data from the given filepath.
 
     Parameters
     ----------
-    filepath : str
+    filepath : Path
         The path to the JSON file.
 
     Returns
@@ -27,7 +30,7 @@ def load_json(filepath: str) -> dict:
         Parsed JSON content as a dictionary.
 
     """
-    with Path(filepath).open() as f:
+    with filepath.open() as f:
         return json.load(f)
 
 
@@ -99,42 +102,111 @@ def generate_layer_composites(
     layer_dict["Image settings list"] = new_image_settings
 
 
-def new_print_file(input_dir: Path, output_dir: Path, config_file: Path) -> None:
+def new_print_file(input_path: Path, output_path: Path, config_file: Path) -> None:
     """Generate a new print file with scaled exposure settings and composite images.
+
+    Now supports zip files containing:
+      - print_settings.json
+      - a "slices" folder of images
 
     Parameters
     ----------
-    input_dir : Path
-        Input directory containing the original print settings and images.
-    output_dir : Path
-        Output directory for the new print settings and images.
+    input_path : Path
+        If this is a .zip, read print_settings.json and slices from inside the zip.
+        Otherwise, read from a directory containing the same structure.
+    output_path : Path
+        If a .zip, write the new print_settings.json and new slices folder into this output zip.
+        Otherwise, write them to a directory.
     config_file : Path
-        Path to the JSON file containing the group definitions.
+        Path to the JSON file containing group definitions.
 
     """
-    print_settings_file = input_dir / "print_settings.json"
-    input_images_dir = input_dir / "slices"
+    # Detect if we're dealing with zip input
+    if input_path.suffix.lower() != ".zip":
+        # TODO: Issue an error message
+        return
+    generated_files = []
+    with zipfile.ZipFile(input_path, "r") as zf:
+        # Load original print settings from zip
+        with zf.open("print_settings.json") as f:
+            original_print_settings = json.load(f)
+        new_json = copy.deepcopy(original_print_settings)
 
-    new_print_settings_file = output_dir / "print_settings.json"
-    output_dir = output_dir / "slices"
-    output_dir.mkdir(parents=True, exist_ok=True)
+        # Load group definitions
+        exposure_config = (
+            json.loads(zf.read(config_file.name)).get("groups", {})
+            if config_file.suffix.lower() == ".json" and config_file.name in zf.namelist()
+            else load_json(config_file)
+        )
 
-    original_print_settings = load_json(print_settings_file)
-    new_json = copy.deepcopy(original_print_settings)
-    exposure_config = load_json(config_file).get("groups", {})
+        # Process each layer to generate composite images
+        for layer_dict in new_json.get("Layers", []):
+            generate_layer_composites_zip(layer_dict, exposure_config, zf, generated_files)
 
-    for layer_dict in new_json.get("Layers", []):
-        generate_layer_composites(layer_dict, exposure_config, input_images_dir, output_dir)
+    # Create a new output zip
+    with zipfile.ZipFile(output_path, "w") as out_zip:
+        # Write updated print_settings.json
+        out_zip.writestr("print_settings.json", json.dumps(new_json, indent=2))
 
-    with new_print_settings_file.open("w") as out:
-        json.dump(new_json, out, indent=2)
+        # Write newly generated images
+        for filename, content in generated_files:
+            out_zip.writestr(f"slices/{filename}", content.getvalue())
+
+
+def generate_layer_composites_zip(
+    layer_dict: dict,
+    exposure_config: dict,
+    zf: zipfile.ZipFile,
+    generated_files: list,
+) -> None:
+    """Generate new image settings for each group and updates the layer_dict.
+
+    Parameters
+    ----------
+    layer_dict : dict
+        Dictionary representing layer settings.
+    exposure_config : dict
+        Exposure configuration to determine offsets and exposure scaling.
+    zf : zipfile.ZipFile
+        The input zip file.
+    generated_files : list
+        List of tuples containing the filename and BytesIO of the generated images.
+
+    """
+    original_settings = layer_dict.get("Image settings list", [])
+    new_image_settings = []
+
+    for group_name, group_settings in exposure_config.get("groups", {}).items():
+        exp_scale = float(group_name) / 100.0
+        for old in original_settings:
+            img_name = old["Image file"]
+            with zf.open(f"slices/{img_name}") as img_file:
+                original_img = Image.open(img_file).convert("L")
+
+            composite_img = compose_group_image(original_img, group_settings)
+            new_name, ext = img_name.rsplit(".", 1)
+            out_filename = f"{new_name}_{group_name}.{ext}"
+
+            # Save composite to in-memory bytes
+            img_bytes = io.BytesIO()
+            composite_img.save(img_bytes, format=ext.upper())
+            img_bytes.seek(0)  # reset pointer for later reading
+            generated_files.append((out_filename, img_bytes))
+
+            new = copy.deepcopy(old)
+            new["Image file"] = out_filename
+            if "Layer exposure time (ms)" in new:
+                new["Layer exposure time (ms)"] = int(new["Layer exposure time (ms)"] * exp_scale)
+            new_image_settings.append(new)
+
+    layer_dict["Image settings list"] = new_image_settings
 
 
 def main() -> None:
     """Generate a new print file with scaled exposure settings and composite images."""
     new_print_file(
-        input_dir=Path("test_files/small_test"),
-        output_dir=Path("test_files/small_test_result"),
+        input_path=Path("test_files/small_test.zip"),
+        output_path=Path("test_files/small_test_result.zip"),
         config_file=Path("json/components.json"),
     )
 
