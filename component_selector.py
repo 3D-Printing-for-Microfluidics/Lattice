@@ -9,6 +9,30 @@ from PIL import ImageTk
 from image_ops import export_cropped_slices, find_white_regions, merge_slices
 
 
+class ProcessingPopup:
+    """A simple popup window showing a processing message."""
+
+    def __init__(self, parent: tk.Tk, message: str = "Processing images...") -> None:
+        """Initialize and open the popup."""
+        self.popup = tk.Toplevel(parent)
+        self.popup.title("Processing")
+        # Center the popup on screen
+        w, h = 200, 50
+        ws = parent.winfo_screenwidth()
+        hs = parent.winfo_screenheight()
+        x = (ws / 2) - (w / 2)
+        y = (hs / 2) - (h / 2)
+        self.popup.geometry(f"{w}x{h}+{int(x)}+{int(y)}")
+        tk.Label(self.popup, text=message, padx=20, pady=10).pack()
+        self.popup.transient(parent)
+        self.popup.grab_set()
+        parent.update()
+
+    def destroy(self) -> None:
+        """Close the popup."""
+        self.popup.destroy()
+
+
 class ComponentSelector:
     """A UI for segmenting print files into their components by selcting and cropping slice images."""
 
@@ -30,9 +54,13 @@ class ComponentSelector:
         self.preview_img = None
         self.preview_canvas_img = None
 
-        # Load and process image
-        self.original_img = merge_slices(self.input_zip)
-        self.regions_data = find_white_regions(self.original_img)
+        # Load and process image with popup
+        popup = ProcessingPopup(self.root)
+        try:
+            self.original_img = merge_slices(self.input_zip)
+            self.regions_data = find_white_regions(self.original_img)
+        finally:
+            popup.destroy()
 
         # Set initial zoom
         screen_width = self.root.winfo_screenwidth() * 0.8
@@ -46,7 +74,7 @@ class ComponentSelector:
     def _get_input_zip(self) -> str | None:
         """Prompt for input zip file."""
         msg = "Select the input print file (.zip)"
-        messagebox.showinfo("Segment Slices", msg)
+        messagebox.showinfo("Component Selector", msg)
         return filedialog.askopenfilename(
             title=msg,
             filetypes=[("Zip", "*.zip"), ("All Files", "*.*")],
@@ -60,12 +88,12 @@ class ComponentSelector:
 
         # Create button frame
         button_frame = tk.Frame(self.root)
-        button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=5, pady=5)
+        button_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
 
         tk.Button(button_frame, text="Zoom In", command=self.zoom_in).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Zoom Out", command=self.zoom_out).pack(side=tk.LEFT, padx=5)
         tk.Button(button_frame, text="Export", command=self.export_cropped_images).pack(side=tk.LEFT, padx=5)
-        tk.Button(button_frame, text="Close", command=self.root.destroy).pack(side=tk.RIGHT, padx=5)
+        tk.Button(button_frame, text="Close", command=self.root.destroy).pack(side=tk.LEFT, padx=5)
 
         # Create canvas with scrollbars
         preview_frame = tk.Frame(self.root)
