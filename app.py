@@ -28,7 +28,7 @@ logger = logging.getLogger(__name__)
 
 
 class App:
-    """A class used to represent the Application with a Tkinter GUI.
+    """Main control and UI for dose customization.
 
     Attributes
     ----------
@@ -61,18 +61,9 @@ class App:
 
     """
 
-    def __init__(self, root: tk.Tk, component_file: str) -> None:
-        """Initialize the App.
-
-        Parameters
-        ----------
-        root : tk.Tk
-            The root window of the Tkinter application.
-        component_file : str
-            The path to the zip file containing the component.
-
-        """
-        self.root = root
+    def __init__(self) -> None:
+        """Initialize the App."""
+        self.root = tk.Tk()
         self.root.title("3D Print Dose Customization")
         self.comp_width = 100
         self.comp_height = 100
@@ -83,7 +74,7 @@ class App:
         self.selection_rect = None
         self.selection_start_x = None
         self.selection_start_y = None
-        self.component_file = component_file
+        self.component_file = self.select_component_file()
 
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
@@ -93,6 +84,7 @@ class App:
         self.arrange_menu = ArrangeMenu(self, menubar)
         self.create_label()
         self.create_canvas()
+        self.root.mainloop()
 
     def create_label(self) -> None:
         """Create the dimensions label."""
@@ -215,18 +207,12 @@ class App:
             comp.deselect()
         self.update_label(None)
 
-
-def main() -> None:
-    """Run the Tkinter application."""
-    messagebox.showinfo("Select Component", "Please select a component zip file to begin.")
-    component_file = filedialog.askopenfilename(title="Select component zip file.", filetypes=[("Zip", "*.zip")])
-    if not component_file:
-        return
-
-    root = tk.Tk()
-    app = App(root, component_file)
-    root.mainloop()
+    @staticmethod
+    def select_component_file() -> None:
+        """Popup to select a component file."""
+        messagebox.showinfo("Select Component", "Please select a component zip file to begin.")
+        return filedialog.askopenfilename(title="Select component zip file.", filetypes=[("Zip", "*.zip")])
 
 
 if __name__ == "__main__":
-    main()
+    App()
