@@ -105,11 +105,15 @@ class Component:
         """
         if event.state & SHIFT_KEY:
             self.toggle_selection()
-        else:
+        elif self not in self.app.selection:
+            # Only deselect others if this component isn't already selected
             self.app.deselect_all()
             self.select()
+        # else: component is already selected, don't change selection state
+
         self.app.update_label(self)
 
+        # Prepare for potential drag
         self.start_x = event.x
         self.start_y = event.y
         self.dragged = False
