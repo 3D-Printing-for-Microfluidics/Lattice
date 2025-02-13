@@ -1,7 +1,6 @@
 """Cutout tool for selecting one component from a print file."""
 
 import tkinter as tk
-from pathlib import Path
 from tkinter import filedialog, messagebox
 
 from PIL import ImageTk
@@ -201,9 +200,18 @@ class ComponentSelector:
             messagebox.showerror("No Region Selected", "Please select a region first.")
             return
 
-        base = Path(self.input_zip)
-        out_zip = base.parent / f"{base.stem}_cropped.zip"
-        export_cropped_slices(self.input_zip, out_zip, self.selected_bbox)
+        out_zip = filedialog.asksaveasfilename(
+            title="Save cropped print file",
+            defaultextension=".zip",
+            filetypes=[("Zip", "*.zip"), ("All Files", "*.*")],
+        )
+        if not out_zip:
+            return
+        popup = ProcessingPopup(self.root, "Exporting images...")
+        try:
+            export_cropped_slices(self.input_zip, out_zip, self.selected_bbox)
+        finally:
+            popup.destroy()
         messagebox.showinfo("Export Complete", f"Cropped print file saved to:\n{out_zip}")
 
 
