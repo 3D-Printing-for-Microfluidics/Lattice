@@ -103,8 +103,12 @@ class Component:
             The event object containing information about the click event.
 
         """
-        if not self.app.canvas.find_withtag("current"):  # If no component was clicked
-            return
+        if event.state & SHIFT_KEY:
+            self.toggle_selection()
+        else:
+            self.app.deselect_all()
+            self.select()
+        self.app.update_label(self)
 
         self.start_x = event.x
         self.start_y = event.y
@@ -124,30 +128,19 @@ class Component:
             dy = event.y - self.start_y
             if dx != 0 or dy != 0:
                 self.dragged = True
-            for comp in self.app.selection:
-                self.app.canvas.move(comp.comp, dx, dy)
-                comp.x += dx
-                comp.y += dy
-            self.start_x = event.x
-            self.start_y = event.y
-            self.app.update_label(self)
+                for comp in self.app.selection:
+                    self.app.canvas.move(comp.comp, dx, dy)
+                    comp.x += dx
+                    comp.y += dy
+                self.start_x = event.x
+                self.start_y = event.y
+                self.app.update_label(self)
 
-    def on_release(self, event: tk.Event) -> None:
-        """Handle the release event on the component.
-
-        Parameters
-        ----------
-        event : tk.Event
-            The event object containing information about the release event.
-
-        """
-        if not self.dragged:
-            if event.state & SHIFT_KEY:  # If shift key was pressed while clicking
-                self.toggle_selection()
-            else:  # If a single component was clicked without the shift key
-                self.app.deselect_all()
-                self.select()
-            self.app.update_label(self)
+    def on_release(self, _: tk.Event) -> None:
+        """Handle the release event on the component."""
+        self.start_x = None
+        self.start_y = None
+        self.dragged = False
 
     def delete(self) -> None:
         """Delete the component from the canvas."""
@@ -229,3 +222,12 @@ class Component:
             "height": self.height,
             "group": self.group,
         }
+
+    def update_for_zoom(self) -> None:
+        """Update the component's visual representation for current zoom level."""
+        zoom = self.app.zoom_factor
+        scaled_x = self.x * zoom
+        scaled_y = self.y * zoom
+        scaled_w = self.width * zoom
+        scaled_h = self.height * zoom
+        self.app.canvas.coords(self.comp, scaled_x, scaled_y, scaled_x + scaled_w, scaled_y + scaled_h)

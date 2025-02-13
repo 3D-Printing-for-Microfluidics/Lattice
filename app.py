@@ -19,6 +19,7 @@ from menus.arrange_menu import ArrangeMenu
 from menus.file_menu import FileMenu
 from menus.group_menu import GroupMenu
 from menus.object_menu import ObjectMenu
+from menus.view_menu import ViewMenu
 
 if TYPE_CHECKING:
     from component import Component
@@ -75,10 +76,12 @@ class App:
         self.selection_start_x = None
         self.selection_start_y = None
         self.component_file = self.select_component_file()
+        self.zoom_factor = 1.0  # Add zoom factor attribute
 
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
         self.file_menu = FileMenu(self, menubar)
+        self.view_menu = ViewMenu(self, menubar)  # Add view menu
         self.group_menu = GroupMenu(self, menubar)
         self.object_menu = ObjectMenu(self, menubar)
         self.arrange_menu = ArrangeMenu(self, menubar)
@@ -146,13 +149,14 @@ class App:
 
     def on_canvas_click(self, event: tk.Event) -> None:
         """Handle the click event on the canvas."""
-        x = self.canvas.canvasx(event.x)
-        y = self.canvas.canvasy(event.y)
+        x = self.canvas.canvasx(event.x) / self.zoom_factor
+        y = self.canvas.canvasy(event.y) / self.zoom_factor
         logger.debug("Click at (%d, %d)", x, y)
-        self.selection_start_x = x
-        self.selection_start_y = y
+
         if not self.canvas.find_withtag("current"):  # nothing was under cursor when clicked
             self.deselect_all()
+            self.selection_start_x = x
+            self.selection_start_y = y
             if self.selection_rect:
                 self.canvas.delete(self.selection_rect)
                 self.selection_rect = None
@@ -162,16 +166,24 @@ class App:
 
     def on_canvas_drag(self, event: tk.Event) -> None:
         """Handle the drag event on the canvas."""
-        x = self.canvas.canvasx(event.x)
-        y = self.canvas.canvasy(event.y)
         if self.selection_start_x is not None and self.selection_start_y is not None:
+            x = self.canvas.canvasx(event.x) / self.zoom_factor
+            y = self.canvas.canvasy(event.y) / self.zoom_factor
+
             if self.selection_rect:
                 self.canvas.delete(self.selection_rect)
+
+            # Scale coordinates for display
+            scaled_start_x = self.selection_start_x * self.zoom_factor
+            scaled_start_y = self.selection_start_y * self.zoom_factor
+            scaled_x = x * self.zoom_factor
+            scaled_y = y * self.zoom_factor
+
             self.selection_rect = self.canvas.create_rectangle(
-                self.selection_start_x,
-                self.selection_start_y,
-                x,
-                y,
+                scaled_start_x,
+                scaled_start_y,
+                scaled_x,
+                scaled_y,
                 outline="blue",
                 dash=(2, 2),
             )
@@ -189,6 +201,12 @@ class App:
 
     def select_components_in_area(self, x1: int, y1: int, x2: int, y2: int) -> None:
         """Select all components within the specified area."""
+        # Convert selection coordinates to unscaled coordinates
+        x1 = x1 / self.zoom_factor
+        y1 = y1 / self.zoom_factor
+        x2 = x2 / self.zoom_factor
+        y2 = y2 / self.zoom_factor
+
         for group in self.groups.values():
             for comp in group:
                 if (
