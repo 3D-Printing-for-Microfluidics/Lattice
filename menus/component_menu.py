@@ -75,7 +75,7 @@ class TileDialog:
         self.top.destroy()
 
 
-class ObjectMenu:
+class ComponentMenu:
     """Create and handle the Component (Object) menu and its actions.
 
     Attributes
@@ -86,7 +86,7 @@ class ObjectMenu:
     """
 
     def __init__(self, app: "App", menubar: tk.Menu) -> None:
-        """Initialize the ObjectMenu class.
+        """Initialize the ComponentMenu class.
 
         Parameters
         ----------
@@ -101,11 +101,12 @@ class ObjectMenu:
         menubar.add_cascade(label="Component", menu=menu)
 
         menu.add_command(label="Load component", command=self.load_component)
+        menu.add_command(label="Component cutout tool", command=self.run_cutout_tool)
         menu.add_separator()
         menu.add_command(label="Add", command=self.add_component, accelerator="Insert")
         menu.add_command(label="Delete", command=self.delete_component, accelerator="Delete")
         menu.add_separator()
-        menu.add_command(label="Tile Create", command=self.tile)
+        menu.add_command(label="Tile create", command=self.tile)
 
         # Bind shortcuts here
         self.app.root.bind_all("<Insert>", lambda _: self.add_component())
@@ -169,3 +170,9 @@ class ObjectMenu:
                     comp.set_color(self.app.colors[group])
                     self.app.groups[group].append(comp)
             self.app.update_label(self.app.groups[group][-1])
+
+    def run_cutout_tool(self) -> None:
+        """Launch the component cutout tool."""
+        import component_selector
+
+        component_selector.ComponentSelector(parent=self.app.root)

@@ -36,9 +36,18 @@ class ProcessingPopup:
 class ComponentSelector:
     """A UI for segmenting print files into their components by selcting and cropping slice images."""
 
-    def __init__(self) -> None:
-        """Initialize the ComponentSelector."""
-        self.root = tk.Tk()
+    def __init__(self, parent: tk.Widget | None = None) -> None:
+        """Initialize the ComponentSelector with an optional parent.
+
+        Parameters
+        ----------
+        parent: tk.Widget | None
+            The parent tk instance, if any.
+
+        """
+        if parent is None:
+            parent = tk._default_root
+        self.root = tk.Toplevel(parent)
         self.root.title("Component Selector")
         self.root.state("zoomed")
 

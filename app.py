@@ -16,9 +16,9 @@ from typing import TYPE_CHECKING
 
 from constants import CANVAS_HEIGHT, CANVAS_WIDTH
 from menus.arrange_menu import ArrangeMenu
+from menus.component_menu import ComponentMenu
 from menus.file_menu import FileMenu
 from menus.group_menu import GroupMenu
-from menus.object_menu import ObjectMenu
 from menus.view_menu import ViewMenu
 
 if TYPE_CHECKING:
@@ -83,7 +83,7 @@ class App:
         self.file_menu = FileMenu(self, menubar)
         self.view_menu = ViewMenu(self, menubar)
         self.group_menu = GroupMenu(self, menubar)
-        self.object_menu = ObjectMenu(self, menubar)
+        self.component_menu = ComponentMenu(self, menubar)
         self.arrange_menu = ArrangeMenu(self, menubar)
         self.create_label()
         self.create_canvas()
