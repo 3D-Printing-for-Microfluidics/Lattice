@@ -128,7 +128,7 @@ class ObjectMenu:
     def add_component(self) -> None:
         """Add a new component to the canvas."""
         if self.app.comp_width is None or self.app.comp_height is None:
-            messagebox.showwarning("No Component laded", "Please load a component first.")
+            messagebox.showwarning("No component laded", "Please load a component first.")
             return
         group = self.app.group_menu.current_group.get()
         if not group:
@@ -138,6 +138,7 @@ class ObjectMenu:
         comp = Component(self.app, x, y, self.app.comp_width, self.app.comp_height, group)
         comp.set_color(self.app.colors[group])
         self.app.groups[group].append(comp)
+        comp.update_for_zoom()
         self.app.deselect_all()
         comp.select()
         self.app.update_label(comp)
