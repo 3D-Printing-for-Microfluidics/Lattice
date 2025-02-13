@@ -1,10 +1,11 @@
 """App methods in the Object menu."""
 
 import tkinter as tk
-from tkinter import messagebox, simpledialog
+from tkinter import filedialog, messagebox, simpledialog
 from typing import TYPE_CHECKING
 
 from component import Component
+from image_ops import load_component_dimensions
 
 if TYPE_CHECKING:
     from app import App
@@ -98,6 +99,9 @@ class ObjectMenu:
         self.app = app
         menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Component", menu=menu)
+
+        menu.add_command(label="Load component", command=self.load_component)
+        menu.add_separator()
         menu.add_command(label="Add", command=self.add_component, accelerator="Insert")
         menu.add_command(label="Delete", command=self.delete_component, accelerator="Delete")
         menu.add_separator()
@@ -107,8 +111,25 @@ class ObjectMenu:
         self.app.root.bind_all("<Insert>", lambda _: self.add_component())
         self.app.root.bind_all("<Delete>", lambda _: self.delete_component())
 
+    def load_component(self) -> None:
+        """Prompt user to select a component zip and store its dimensions."""
+        file_path = filedialog.askopenfilename(title="Select component zip file", filetypes=[("Zip", "*.zip")])
+        if not file_path:
+            return
+        try:
+            width, height = load_component_dimensions(file_path)
+            self.app.comp_width = width
+            self.app.comp_height = height
+            self.app.component_file = file_path
+            messagebox.showinfo("Component loaded", f"Width={width}, Height={height}")
+        except Exception as exc:
+            messagebox.showerror("Error", f"Failed to load component: {exc}")
+
     def add_component(self) -> None:
         """Add a new component to the canvas."""
+        if self.app.comp_width is None or self.app.comp_height is None:
+            messagebox.showwarning("No Component laded", "Please load a component first.")
+            return
         group = self.app.group_menu.current_group.get()
         if not group:
             simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")

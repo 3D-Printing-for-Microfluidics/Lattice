@@ -66,8 +66,8 @@ class App:
         """Initialize the App."""
         self.root = tk.Tk()
         self.root.title("3D Print Dose Customization")
-        self.comp_width = 100
-        self.comp_height = 100
+        self.comp_width = None
+        self.comp_height = None
         self.selection = []
         self.groups = {}
         self.colors = {}
@@ -75,13 +75,13 @@ class App:
         self.selection_rect = None
         self.selection_start_x = None
         self.selection_start_y = None
-        self.component_file = self.select_component_file()
-        self.zoom_factor = 1.0  # Add zoom factor attribute
+        self.component_file = None
+        self.zoom_factor = 1.0
 
         menubar = tk.Menu(self.root)
         self.root.config(menu=menubar)
         self.file_menu = FileMenu(self, menubar)
-        self.view_menu = ViewMenu(self, menubar)  # Add view menu
+        self.view_menu = ViewMenu(self, menubar)
         self.group_menu = GroupMenu(self, menubar)
         self.object_menu = ObjectMenu(self, menubar)
         self.arrange_menu = ArrangeMenu(self, menubar)
