@@ -1,10 +1,10 @@
 """UI for 3D Print Dose Customization.
 
-TODO:
-- Add load component to file menu?
+TO DO:
 - Add absolute vs. scale option for exposure scaling
 - Only allow floats in group names
-- Cutout tool for component selection?
+- Make cutout tool appear on top, and make submenus appear on top too
+- FIx arrange menu functions to work with zooming
 """
 
 from __future__ import annotations

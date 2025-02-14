@@ -107,7 +107,16 @@ class FileMenu:
 
     def generate_print_file(self) -> None:
         """Generate a new print file with scaled exposure settings and composite images."""
-        input_path = self.app.component_file
+        # Check if a component has been loaded
+        if not self.app.component_file:
+            messagebox.showerror("Error", "Please load a component file first.")
+            return
+
+        # Check if the canvas is empty
+        if not any(self.app.groups.values()):
+            messagebox.showerror("Error", "Please add some components to the canvas first.")
+            return
+
         output_path = filedialog.asksaveasfilename(
             title="Save print file",
             defaultextension=".zip",
@@ -118,7 +127,7 @@ class FileMenu:
 
         try:
             data = self.get_layout_data().get("groups", {})
-            new_print_file(Path(input_path), Path(output_path), data)
+            new_print_file(Path(self.app.component_file), Path(output_path), data)
             messagebox.showinfo("Success", f"Print file saved to:\n{output_path}")
         except Exception as e:
             messagebox.showerror("Error", str(e))
