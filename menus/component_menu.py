@@ -112,6 +112,25 @@ class ComponentMenu:
         self.app.root.bind_all("<Insert>", lambda _: self.add_component())
         self.app.root.bind_all("<Delete>", lambda _: self.delete_component())
 
+    def _check_can_create_component(self) -> str | None:
+        """Check if components can be created.
+
+        Returns
+        -------
+        str | None
+            The group name if checks pass, None otherwise.
+        """
+        if self.app.comp_width is None or self.app.comp_height is None:
+            messagebox.showwarning("No component loaded", "Please load a component first.")
+            return None
+
+        group = self.app.group_menu.current_group.get()
+        if not group:
+            simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
+            return None
+
+        return group
+
     def load_component(self) -> None:
         """Prompt user to select a component zip and store its dimensions."""
         file_path = filedialog.askopenfilename(title="Select component zip file", filetypes=[("Zip", "*.zip")])
@@ -128,12 +147,8 @@ class ComponentMenu:
 
     def add_component(self) -> None:
         """Add a new component to the canvas."""
-        if self.app.comp_width is None or self.app.comp_height is None:
-            messagebox.showwarning("No component laded", "Please load a component first.")
-            return
-        group = self.app.group_menu.current_group.get()
+        group = self._check_can_create_component()
         if not group:
-            simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
             return
         x, y = 50, 50
         comp = Component(self.app, x, y, self.app.comp_width, self.app.comp_height, group)
@@ -152,9 +167,8 @@ class ComponentMenu:
 
     def tile(self) -> None:
         """Tile components based on user input."""
-        group = self.app.group_menu.current_group.get()
+        group = self._check_can_create_component()
         if not group:
-            simpledialog.messagebox.showerror("Error", "No group is selected. Create or select a group to begin.")
             return
 
         dialog = TileDialog(self.app.root)

@@ -72,11 +72,20 @@ class Component:
 
         """
         self.app = app
+
+        self.x = int(x)
+        self.y = int(y)
+        self.width = int(width)
+        self.height = int(height)
+        self.group = group
+        self.dragged = False
+        self.start_x = None
+        self.start_y = None
         self.comp = self.app.canvas.create_rectangle(
-            x,
-            y,
-            x + width,
-            y + height,
+            self.x,
+            self.y,
+            self.x + self.width,
+            self.y + self.height,
             fill="blue",
             tags="comp",
             outline="",
@@ -85,14 +94,6 @@ class Component:
         self.app.canvas.tag_bind(self.comp, "<Button-1>", self.on_click)
         self.app.canvas.tag_bind(self.comp, "<B1-Motion>", self.on_drag)
         self.app.canvas.tag_bind(self.comp, "<ButtonRelease-1>", self.on_release)
-        self.x = x
-        self.y = y
-        self.width = width
-        self.height = height
-        self.start_x = None
-        self.start_y = None
-        self.group = group
-        self.dragged = False
         self.redraw_for_zoom()
 
     def on_click(self, event: tk.Event) -> None:
