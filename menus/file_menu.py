@@ -105,6 +105,51 @@ class FileMenu:
 
         self.app.group_menu.update_dropdown()
 
+    def check_component_overlap(self) -> tuple[bool, str]:
+        """Check if any components overlap.
+
+        This design is inefficient as each component gets compared twice, but the implementation is simple.
+
+        Returns
+        -------
+        tuple[bool, str]
+            A tuple containing:
+            - bool: True if there is overlap, False otherwise
+            - str: Description of overlapping components if any, empty string otherwise
+
+        """
+        # Start with each component
+        for g1, g1_components in self.app.groups.items():
+            for c1 in g1_components:
+                c1_left = c1.x
+                c1_right = c1_left + c1.width
+                c1_top = c1.y
+                c1_bottom = c1_top + c1.height
+
+                # Check against all other components
+                for g2, g2_components in self.app.groups.items():
+                    for c2 in g2_components:
+                        if c1 is c2:
+                            continue
+
+                        c2_left = c2.x
+                        c2_right = c2_left + c2.width
+                        c2_top = c2.y
+                        c2_bottom = c2_top + c2.height
+
+                        if c1_left < c2_right and c1_right > c2_left and c1_top < c2_bottom and c1_bottom > c2_top:
+                            self.app.deselect_all()
+                            c1.select()
+                            c2.select()
+                            msg = (
+                                f"Component overlap detected:\n"
+                                f"Component in group '{g1}' at ({c1_left}, {c1_top})\n"
+                                f"overlaps with component in group '{g2}' at ({c2_left}, {c2_top})"
+                            )
+                            return True, msg
+
+        return False, ""
+
     def generate_print_file(self) -> None:
         """Generate a new print file with scaled exposure settings and composite images."""
         # Check if a component has been loaded
@@ -117,6 +162,62 @@ class FileMenu:
             messagebox.showerror("Error", "Please add some components to the canvas first.")
             return
 
+        has_overlap, overlap_msg = self.check_component_overlap()
+        if has_overlap:
+            messagebox.showerror("Error", f"Cannot generate print file.\n\n{overlap_msg}")
+            return
+
+        # Create mode selection dialog
+        mode_dialog = tk.Toplevel(self.app.root)
+        mode_dialog.title("Generation Mode")
+        mode_dialog.geometry("300x150")
+        mode_dialog.transient(self.app.root)
+        mode_dialog.grab_set()
+
+        # Center the dialog
+        mode_dialog.geometry(
+            "+%d+%d"
+            % (
+                self.app.root.winfo_rootx() + self.app.root.winfo_width() // 3,
+                self.app.root.winfo_rooty() + self.app.root.winfo_height() // 3,
+            ),
+        )
+
+        selected_mode = tk.StringVar(value="absolute")  # Default to absolute mode
+
+        tk.Label(mode_dialog, text="Choose generation mode:", pady=10).pack()
+        tk.Radiobutton(mode_dialog, text="Absolute", variable=selected_mode, value="absolute").pack(padx=20, anchor="w")
+        tk.Radiobutton(mode_dialog, text="Scaling", variable=selected_mode, value="scaling").pack(padx=20, anchor="w")
+        result = {"mode": None}
+
+        def on_ok() -> None:
+            result["mode"] = selected_mode.get()
+            mode_dialog.destroy()
+
+        def on_cancel() -> None:
+            mode_dialog.destroy()
+
+        tk.Button(mode_dialog, text="OK", command=on_ok, width=10).pack(side=tk.LEFT, padx=20, pady=20)
+        tk.Button(mode_dialog, text="Cancel", command=on_cancel, width=10).pack(side=tk.RIGHT, padx=20, pady=20)
+
+        mode_dialog.wait_window()  # Wait for dialog to close
+
+        if result["mode"] is None:  # User clicked cancel
+            return
+
+        is_absolute = result["mode"] == "absolute"
+
+        # Validate group names based on selected mode
+        for group_name in self.app.groups:
+            try:
+                value = float(group_name)
+                if value <= 0:
+                    messagebox.showerror("Invalid Group Name", f"Group name '{group_name}' must be a positive number.")
+                    return
+            except ValueError:
+                messagebox.showerror("Invalid Group Name", f"Group name '{group_name}' must be a valid number.")
+                return
+
         output_path = filedialog.asksaveasfilename(
             title="Save print file",
             defaultextension=".zip",
@@ -127,7 +228,7 @@ class FileMenu:
 
         try:
             data = self.get_layout_data().get("groups", {})
-            new_print_file(Path(self.app.component_file), Path(output_path), data)
+            new_print_file(Path(self.app.component_file), Path(output_path), data, is_absolute=is_absolute)
             messagebox.showinfo("Success", f"Print file saved to:\n{output_path}")
         except Exception as e:
             messagebox.showerror("Error", str(e))
