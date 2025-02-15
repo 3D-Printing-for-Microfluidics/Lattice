@@ -53,4 +53,4 @@ class ViewMenu:
         # Adjust all components' positions and sizes
         for group in self.app.groups.values():
             for comp in group:
-                comp.update_for_zoom()
+                comp.redraw_for_zoom()

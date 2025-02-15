@@ -93,6 +93,7 @@ class Component:
         self.start_y = None
         self.group = group
         self.dragged = False
+        self.redraw_for_zoom()
 
     def on_click(self, event: tk.Event) -> None:
         """Handle the click event on the component.
@@ -128,14 +129,14 @@ class Component:
 
         """
         if self.start_x is not None and self.start_y is not None:
-            dx = event.x - self.start_x
-            dy = event.y - self.start_y
+            dx = (event.x - self.start_x) / self.app.zoom_factor
+            dy = (event.y - self.start_y) / self.app.zoom_factor
+
             if dx != 0 or dy != 0:
                 self.dragged = True
                 for comp in self.app.selection:
-                    self.app.canvas.move(comp.comp, dx, dy)
-                    comp.x += dx
-                    comp.y += dy
+                    comp.set_position(comp.x + dx, comp.y + dy)
+
                 self.start_x = event.x
                 self.start_y = event.y
                 self.app.update_label(self)
@@ -204,11 +205,9 @@ class Component:
             The new y-coordinate of the component.
 
         """
-        dx = x - self.x
-        dy = y - self.y
-        self.app.canvas.move(self.comp, dx, dy)
-        self.x = x
-        self.y = y
+        self.x = int(x)
+        self.y = int(y)
+        self.redraw_for_zoom()
 
     def to_dict(self) -> dict:
         """Convert the component to a dictionary.
@@ -227,8 +226,8 @@ class Component:
             "group": self.group,
         }
 
-    def update_for_zoom(self) -> None:
-        """Update the component's visual representation for current zoom level."""
+    def redraw_for_zoom(self) -> None:
+        """Redraw the component for the current zoom level."""
         zoom = self.app.zoom_factor
         scaled_x = self.x * zoom
         scaled_y = self.y * zoom

@@ -105,15 +105,13 @@ class FileMenu:
 
         self.app.group_menu.update_dropdown()
 
-    def check_component_overlap(self) -> tuple[bool, str]:
+    def check_component_overlap(self) -> set[Component]:
         """Check if any components overlap.
 
         Returns
         -------
-        tuple[bool, str]
-            A tuple containing:
-            - bool: True if there is overlap, False otherwise
-            - str: Description of overlapping components if any, empty string otherwise
+        set[Component]
+            A set of all overlapping components, or empty set if no components overlap.
 
         """
         overlapping_components = set()
@@ -135,20 +133,12 @@ class FileMenu:
                 c2_top = c2.y
                 c2_bottom = c2_top + c2.height
 
-                # For top-down coordinates (y increases downward):
+                # For top-down coordinates (y increases downward in image coordinates):
                 if c1_left < c2_right and c1_right > c2_left and c1_top < c2_bottom and c1_bottom > c2_top:
                     overlapping_components.add(c1)
                     overlapping_components.add(c2)
 
-        if overlapping_components:
-            self.app.deselect_all()
-            for component in overlapping_components:
-                component.select()
-
-            msg = f"Error: {len(overlapping_components)} components overlap"
-            return True, msg
-
-        return False, ""
+        return overlapping_components
 
     def generate_print_file(self) -> None:
         """Generate a new print file with scaled exposure settings and composite images."""
@@ -162,9 +152,15 @@ class FileMenu:
             messagebox.showerror("Error", "Please add some components to the canvas first.")
             return
 
-        has_overlap, overlap_msg = self.check_component_overlap()
-        if has_overlap:
-            messagebox.showerror("Error", f"Cannot generate print file.\n\n{overlap_msg}")
+        # Check for overlapping components
+        overlapping_components = self.check_component_overlap()
+        if overlapping_components:
+            self.app.deselect_all()
+            for component in overlapping_components:
+                component.select()
+
+            msg = f"Cannot generate print file.\n\n{len(overlapping_components)} components overlap."
+            messagebox.showerror("Error", msg)
             return
 
         # Create mode selection dialog

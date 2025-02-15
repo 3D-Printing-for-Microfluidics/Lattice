@@ -5,6 +5,8 @@ TO DO:
 - Only allow floats in group names
 - Make cutout tool appear on top, and make submenus appear on top too
 - FIx arrange menu functions to work with zooming
+- Resize all components loaded when loading a new component
+- Change component layout file to only include positions
 """
 
 from __future__ import annotations

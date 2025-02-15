@@ -139,7 +139,6 @@ class ComponentMenu:
         comp = Component(self.app, x, y, self.app.comp_width, self.app.comp_height, group)
         comp.set_color(self.app.colors[group])
         self.app.groups[group].append(comp)
-        comp.update_for_zoom()
         self.app.deselect_all()
         comp.select()
         self.app.update_label(comp)
