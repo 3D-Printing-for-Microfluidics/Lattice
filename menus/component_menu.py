@@ -177,8 +177,8 @@ class ComponentMenu:
             x_start, y_start, x_spacing, y_spacing, num_x, num_y = dialog.result
             for i in range(num_x):
                 for j in range(num_y):
-                    x = x_start + i * x_spacing
-                    y = y_start + j * y_spacing
+                    x = x_start + i * (self.app.comp_width + x_spacing)
+                    y = y_start + j * (self.app.comp_height + y_spacing)
                     comp = Component(self.app, x, y, self.app.comp_width, self.app.comp_height, group)
                     comp.set_color(self.app.colors[group])
                     self.app.groups[group].append(comp)
