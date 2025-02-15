@@ -42,6 +42,7 @@ A graphical tool for arranging and customizing components for 3D printing with d
    - Click and drag to move components
    - Shift+click to select multiple components
    - Use Arrange > Set X and Arrange > Set Y for precise positioning
+   - Use Arrange > align left, right, top, bottom to align selected components
    - Delete selected components with Delete key
 
 3. **Creating Patterns**
@@ -63,6 +64,14 @@ A graphical tool for arranging and customizing components for 3D printing with d
 - `Ctrl+G`: Create new group
 - `Ctrl+S`: Save layout
 - `Ctrl+O`: Open layout
+- `Ctrl+L`: Align selected components left
+- `Ctrl+R`: Align selected components right
+- `Ctrl+T`: Align selected components top
+- `Ctrl+B`: Align selected components bottom
+- `Ctrl+X`: Set X position for selected components
+- `Ctrl+Y`: Set Y position for selected components
+- Shift click to select multiple components
+- Click and drag to select with a selection box
 
 ## Notes
 
