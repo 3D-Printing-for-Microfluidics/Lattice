@@ -108,8 +108,6 @@ class FileMenu:
     def check_component_overlap(self) -> tuple[bool, str]:
         """Check if any components overlap.
 
-        This design is inefficient as each component gets compared twice, but the implementation is simple.
-
         Returns
         -------
         tuple[bool, str]
@@ -118,35 +116,37 @@ class FileMenu:
             - str: Description of overlapping components if any, empty string otherwise
 
         """
+        overlapping_components = set()
+
+        # Get all components in a flat list
+        all_components = [comp for group in self.app.groups.values() for comp in group]
+
         # Start with each component
-        for g1, g1_components in self.app.groups.items():
-            for c1 in g1_components:
-                c1_left = c1.x
-                c1_right = c1_left + c1.width
-                c1_top = c1.y
-                c1_bottom = c1_top + c1.height
+        for i, c1 in enumerate(all_components):
+            c1_left = c1.x
+            c1_right = c1_left + c1.width
+            c1_top = c1.y
+            c1_bottom = c1_top + c1.height
 
-                # Check against all other components
-                for g2, g2_components in self.app.groups.items():
-                    for c2 in g2_components:
-                        if c1 is c2:
-                            continue
+            # Check against all remaining components (only check forward to avoid duplicate comparisons)
+            for c2 in all_components[i + 1 :]:
+                c2_left = c2.x
+                c2_right = c2_left + c2.width
+                c2_top = c2.y
+                c2_bottom = c2_top + c2.height
 
-                        c2_left = c2.x
-                        c2_right = c2_left + c2.width
-                        c2_top = c2.y
-                        c2_bottom = c2_top + c2.height
+                # For top-down coordinates (y increases downward):
+                if c1_left < c2_right and c1_right > c2_left and c1_top < c2_bottom and c1_bottom > c2_top:
+                    overlapping_components.add(c1)
+                    overlapping_components.add(c2)
 
-                        if c1_left < c2_right and c1_right > c2_left and c1_top < c2_bottom and c1_bottom > c2_top:
-                            self.app.deselect_all()
-                            c1.select()
-                            c2.select()
-                            msg = (
-                                f"Component overlap detected:\n"
-                                f"Component in group '{g1}' at ({c1_left}, {c1_top})\n"
-                                f"overlaps with component in group '{g2}' at ({c2_left}, {c2_top})"
-                            )
-                            return True, msg
+        if overlapping_components:
+            self.app.deselect_all()
+            for component in overlapping_components:
+                component.select()
+
+            msg = f"Error: {len(overlapping_components)} components overlap"
+            return True, msg
 
         return False, ""
 
