@@ -45,10 +45,13 @@ class ComponentSelector:
 
         """
         if parent is None:
-            parent = tk._default_root
-        self.root = tk.Toplevel(parent)
+            self.root = tk.Tk()
+        else:
+            self.root = tk.Toplevel(parent)
+
         self.root.title("Component Selector")
         self.root.state("zoomed")
+        self.root.grab_set()  # Focus on this window until it is closed
 
         self.input_zip = self._get_input_zip()
         if not self.input_zip:
