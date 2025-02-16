@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from component import Component
 from gen_print_file import new_print_file
 from image_ops import get_component_dimensions
+from popup import Popup
 
 if TYPE_CHECKING:
     from app import App
@@ -198,9 +199,12 @@ class FileMenu:
         if not output_path:
             return
 
+        popup = Popup(self.app.root, message="Generating print file...")
         try:
             data = self.get_layout_data().get("components", [])
             new_print_file(Path(self.app.component_file), Path(output_path), data)
             messagebox.showinfo("Success", f"Print file saved to:\n{output_path}")
         except Exception as e:
             messagebox.showerror("Error", str(e))
+        finally:
+            popup.destroy()
