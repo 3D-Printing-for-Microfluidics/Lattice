@@ -3,11 +3,12 @@
 import json
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, messagebox, simpledialog
+from tkinter import filedialog, messagebox
 from typing import TYPE_CHECKING
 
 from component import Component
 from gen_print_file import new_print_file
+from image_ops import get_component_dimensions
 
 if TYPE_CHECKING:
     from app import App
@@ -35,18 +36,34 @@ class FileMenu:
 
         """
         self.app = app
-        file_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="File", menu=file_menu)
-        file_menu.add_command(label="Open Layout", command=self.load_json, accelerator="Ctrl+O")
-        file_menu.add_command(label="Save Layout", command=self.save_json, accelerator="Ctrl+S")
-        file_menu.add_separator()
-        file_menu.add_command(label="Generate print file", command=self.generate_print_file)
-        file_menu.add_separator()
-        file_menu.add_command(label="Exit", command=self.app.root.quit)
+        self.menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="File", menu=self.menu)
+        self.menu.add_command(label="Load component", command=self.load_component, accelerator="Ctrl+C")
+        self.menu.add_command(label="Open Layout", command=self.load_json, accelerator="Ctrl+O")
+        self.menu.add_command(label="Save Layout", command=self.save_json, accelerator="Ctrl+S")
+        self.menu.add_separator()
+        self.menu.add_command(label="Generate print file", command=self.generate_print_file)
+        self.menu.add_separator()
+        self.menu.add_command(label="Exit", command=self.app.root.quit)
 
-        # Bind shortcuts here
+        self.app.root.bind_all("<Control-c>", lambda _: self.load_component())
         self.app.root.bind_all("<Control-o>", lambda _: self.load_json())
         self.app.root.bind_all("<Control-s>", lambda _: self.save_json())
+
+    def load_component(self) -> None:
+        """Prompt user to select a component zip and store its dimensions."""
+        file_path = filedialog.askopenfilename(title="Select component zip file", filetypes=[("Zip", "*.zip")])
+        if not file_path:
+            return
+        try:
+            width, height = get_component_dimensions(file_path)
+        except Exception as exc:
+            messagebox.showerror("Error", f"Failed to load component: {exc}")
+        self.app.comp_width = width
+        self.app.comp_height = height
+        self.app.component_file = file_path
+        self.app.redraw_canvas()
+        messagebox.showinfo("Component loaded", f"Width={width}, Height={height}")
 
     def get_layout_data(self) -> dict:
         """Return groups, positions, and colors as a dictionary.
@@ -109,14 +126,7 @@ class FileMenu:
 
         for comp_data in data.get("components", []):
             group = comp_data["group"]
-            component = Component(
-                self.app,
-                x=comp_data["x"],
-                y=comp_data["y"],
-                width=self.app.comp_width,
-                height=self.app.comp_height,
-                group=group,
-            )
+            component = Component(self.app, x=comp_data["x"], y=comp_data["y"], group=group)
             component.set_color(self.app.colors[group])
             self.app.groups[group].append(component)
 
@@ -139,16 +149,16 @@ class FileMenu:
         # Start with each component
         for i, c1 in enumerate(all_components):
             c1_left = c1.x
-            c1_right = c1_left + c1.width
+            c1_right = c1_left + +self.app.comp_width
             c1_top = c1.y
-            c1_bottom = c1_top + c1.height
+            c1_bottom = c1_top + self.app.comp_height
 
             # Check against all remaining components (only check forward to avoid duplicate comparisons)
             for c2 in all_components[i + 1 :]:
                 c2_left = c2.x
-                c2_right = c2_left + c2.width
+                c2_right = c2_left + self.app.comp_width
                 c2_top = c2.y
-                c2_bottom = c2_top + c2.height
+                c2_bottom = c2_top + self.app.comp_height
 
                 # For top-down coordinates (y increases downward in image coordinates):
                 if c1_left < c2_right and c1_right > c2_left and c1_top < c2_bottom and c1_bottom > c2_top:
@@ -180,57 +190,6 @@ class FileMenu:
             messagebox.showerror("Error", msg)
             return
 
-        # Create mode selection dialog
-        mode_dialog = tk.Toplevel(self.app.root)
-        mode_dialog.title("Generation Mode")
-        mode_dialog.geometry("300x150")
-        mode_dialog.transient(self.app.root)
-        mode_dialog.grab_set()
-
-        # Center the dialog
-        mode_dialog.geometry(
-            "+%d+%d"
-            % (
-                self.app.root.winfo_rootx() + self.app.root.winfo_width() // 3,
-                self.app.root.winfo_rooty() + self.app.root.winfo_height() // 3,
-            ),
-        )
-
-        selected_mode = tk.StringVar(value="absolute")  # Default to absolute mode
-
-        tk.Label(mode_dialog, text="Choose generation mode:", pady=10).pack()
-        tk.Radiobutton(mode_dialog, text="Absolute", variable=selected_mode, value="absolute").pack(padx=20, anchor="w")
-        tk.Radiobutton(mode_dialog, text="Scaling", variable=selected_mode, value="scaling").pack(padx=20, anchor="w")
-        result = {"mode": None}
-
-        def on_ok() -> None:
-            result["mode"] = selected_mode.get()
-            mode_dialog.destroy()
-
-        def on_cancel() -> None:
-            mode_dialog.destroy()
-
-        tk.Button(mode_dialog, text="OK", command=on_ok, width=10).pack(side=tk.LEFT, padx=20, pady=20)
-        tk.Button(mode_dialog, text="Cancel", command=on_cancel, width=10).pack(side=tk.RIGHT, padx=20, pady=20)
-
-        mode_dialog.wait_window()  # Wait for dialog to close
-
-        if result["mode"] is None:  # User clicked cancel
-            return
-
-        is_absolute = result["mode"] == "absolute"
-
-        # Validate group names based on selected mode
-        for group_name in self.app.groups:
-            try:
-                value = float(group_name)
-                if value <= 0:
-                    messagebox.showerror("Invalid Group Name", f"Group name '{group_name}' must be a positive number.")
-                    return
-            except ValueError:
-                messagebox.showerror("Invalid Group Name", f"Group name '{group_name}' must be a valid number.")
-                return
-
         output_path = filedialog.asksaveasfilename(
             title="Save print file",
             defaultextension=".zip",
@@ -241,7 +200,7 @@ class FileMenu:
 
         try:
             data = self.get_layout_data().get("components", [])
-            new_print_file(Path(self.app.component_file), Path(output_path), data, is_absolute=is_absolute)
+            new_print_file(Path(self.app.component_file), Path(output_path), data)
             messagebox.showinfo("Success", f"Print file saved to:\n{output_path}")
         except Exception as e:
             messagebox.showerror("Error", str(e))

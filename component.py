@@ -42,13 +42,11 @@ class Component:
 
     """
 
-    def __init__(  # noqa: PLR0913
+    def __init__(
         self,
         app: App,
         x: int,
         y: int,
-        width: int,
-        height: int,
         group: str,
     ) -> None:
         """Initialize a component.
@@ -56,36 +54,28 @@ class Component:
         Parameters
         ----------
         app : App
-            The app in which the component is drawn.
+            Reference to the app instance.
         x : int
             The x-coordinate of the component.
         y : int
             The y-coordinate of the component.
-        width : int
-            The width of the component.
-        height : int
-            The height of the component.
-        app : App
-            Reference to the App instance.
         group : str
             The group to which the component belongs.
 
         """
         self.app = app
-
         self.x = int(x)
         self.y = int(y)
-        self.width = int(width)
-        self.height = int(height)
         self.group = group
+
         self.dragged = False
         self.start_x = None
         self.start_y = None
         self.comp = self.app.canvas.create_rectangle(
             self.x,
             self.y,
-            self.x + self.width,
-            self.y + self.height,
+            self.x + self.app.comp_width,
+            self.y + self.app.comp_height,
             fill="blue",
             tags="comp",
             outline="",
@@ -217,6 +207,7 @@ class Component:
         -------
         tuple[int, int]
             The (x, y) position of the component.
+
         """
         return (self.x, self.y)
 
@@ -225,6 +216,6 @@ class Component:
         zoom = self.app.zoom_factor
         scaled_x = self.x * zoom
         scaled_y = self.y * zoom
-        scaled_w = self.width * zoom
-        scaled_h = self.height * zoom
+        scaled_w = self.app.comp_width * zoom
+        scaled_h = self.app.comp_height * zoom
         self.app.canvas.coords(self.comp, scaled_x, scaled_y, scaled_x + scaled_w, scaled_y + scaled_h)

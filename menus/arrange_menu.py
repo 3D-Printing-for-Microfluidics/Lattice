@@ -60,9 +60,9 @@ class ArrangeMenu:
         """Align selected components to the right."""
         if not self.app.selection:
             return
-        max_x = max(comp.x + comp.width for comp in self.app.selection)
+        max_x = max(comp.x + self.app.comp_width for comp in self.app.selection)
         for comp in self.app.selection:
-            comp.set_position(max_x - comp.width, comp.y)
+            comp.set_position(max_x - self.app.comp_width, comp.y)
         self.app.update_label(self.app.selection[0])
 
     def align_top(self) -> None:
@@ -78,9 +78,9 @@ class ArrangeMenu:
         """Align selected components to the bottom."""
         if not self.app.selection:
             return
-        max_y = max(comp.y + comp.height for comp in self.app.selection)
+        max_y = max(comp.y + self.app.comp_height for comp in self.app.selection)
         for comp in self.app.selection:
-            comp.set_position(comp.x, max_y - comp.height)
+            comp.set_position(comp.x, max_y - self.app.comp_height)
         self.app.update_label(self.app.selection[0])
 
     def set_x(self) -> None:

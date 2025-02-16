@@ -103,7 +103,7 @@ class App:
         if comp is None:
             self.dimensions_label.config(text="")
             return
-        text = f"X: {comp.x}, Y: {comp.y}, Width: {comp.width}, Height: {comp.height}, Group: {comp.group}"
+        text = f"X: {comp.x}, Y: {comp.y}, Width: {self.comp_width}, Height: {self.comp_height}, Group: {comp.group}"
         self.dimensions_label.config(text=text)
 
     def create_canvas(self) -> None:
@@ -143,6 +143,16 @@ class App:
     def clear_canvas(self) -> None:
         """Clear all components from the canvas."""
         self.canvas.delete("all")
+
+    def redraw_canvas(self) -> None:
+        """Update the canvas and its contents based on current zoom level."""
+        new_width = int(CANVAS_WIDTH * self.zoom_factor)
+        new_height = int(CANVAS_HEIGHT * self.zoom_factor)
+        self.canvas.config(width=new_width, height=new_height)
+        self.canvas.config(scrollregion=(0, 0, new_width, new_height))
+        for group in self.groups.values():
+            for comp in group:
+                comp.redraw_for_zoom()
 
     def on_canvas_click(self, event: tk.Event) -> None:
         """Handle the click event on the canvas."""
@@ -208,9 +218,9 @@ class App:
             for comp in group:
                 if (
                     comp.x >= min(x1, x2)
-                    and comp.x + comp.width <= max(x1, x2)
+                    and comp.x + self.comp_width <= max(x1, x2)
                     and comp.y >= min(y1, y2)
-                    and comp.y + comp.height <= max(y1, y2)
+                    and comp.y + self.comp_height <= max(y1, y2)
                 ):
                     comp.select()
         if self.selection:

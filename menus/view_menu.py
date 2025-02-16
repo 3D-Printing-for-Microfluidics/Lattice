@@ -3,8 +3,6 @@
 import tkinter as tk
 from typing import TYPE_CHECKING
 
-from constants import CANVAS_HEIGHT, CANVAS_WIDTH
-
 if TYPE_CHECKING:
     from app import App
 
@@ -36,21 +34,9 @@ class ViewMenu:
     def zoom_in(self) -> None:
         """Increase zoom by 10%."""
         self.app.zoom_factor = getattr(self.app, "zoom_factor", 1.0) + 0.1
-        self.redraw_canvas()
+        self.app.redraw_canvas()
 
     def zoom_out(self) -> None:
         """Decrease zoom by 10%."""
         self.app.zoom_factor = max(0.1, getattr(self.app, "zoom_factor", 1.0) - 0.1)
-        self.redraw_canvas()
-
-    def redraw_canvas(self) -> None:
-        """Update the canvas and its contents based on current zoom level."""
-        new_width = int(CANVAS_WIDTH * self.app.zoom_factor)
-        new_height = int(CANVAS_HEIGHT * self.app.zoom_factor)
-        self.app.canvas.config(width=new_width, height=new_height)
-        self.app.canvas.config(scrollregion=(0, 0, new_width, new_height))
-
-        # Adjust all components' positions and sizes
-        for group in self.app.groups.values():
-            for comp in group:
-                comp.redraw_for_zoom()
+        self.app.redraw_canvas()
