@@ -149,7 +149,7 @@ class FileMenu:
         # Start with each component
         for i, c1 in enumerate(all_components):
             c1_left = c1.x
-            c1_right = c1_left + +self.app.comp_width
+            c1_right = c1_left + self.app.comp_width
             c1_top = c1.y
             c1_bottom = c1_top + self.app.comp_height
 
