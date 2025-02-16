@@ -49,17 +49,26 @@ class FileMenu:
         self.app.root.bind_all("<Control-s>", lambda _: self.save_json())
 
     def get_layout_data(self) -> dict:
-        """Return the current groups and colors as a dictionary."""
-        data = {}
-        data["groups"] = {}
-        data["colors"] = self.app.colors
-        for group_name, objs in self.app.groups.items():
-            data["groups"][group_name] = []
-            for comp in objs:
-                comp_dict = comp.to_dict()
-                comp_dict.pop("group", None)
-                data["groups"][group_name].append(comp_dict)
-        return data
+        """Return groups, positions, and colors as a dictionary.
+
+        Returns
+        -------
+        dict
+            Contains colors and a flat list of components with their groups and positions.
+
+        """
+        return {
+            "colors": self.app.colors,
+            "components": [
+                {
+                    "group": comp.group,
+                    "x": comp.x,
+                    "y": comp.y,
+                }
+                for group in self.app.groups.values()
+                for comp in group
+            ],
+        }
 
     def save_json(self) -> None:
         """Save the components and colors to a JSON file."""
@@ -74,7 +83,11 @@ class FileMenu:
                 json.dump(data, f, indent=4)
 
     def load_json(self) -> None:
-        """Load components and colors from a JSON file."""
+        """Load layout from a JSON file."""
+        if self.app.comp_width is None or self.app.comp_height is None:
+            messagebox.showwarning("No component loaded", "Please load a component first.")
+            return
+
         filename = filedialog.askopenfilename(
             defaultextension=".json",
             initialfile="layout.json",
@@ -82,26 +95,30 @@ class FileMenu:
         )
         if not filename:
             return
+
         try:
             with Path(filename).open() as f:
                 data = json.load(f)
-        except FileNotFoundError:
-            simpledialog.messagebox.showerror("Error", "File not found.")
-            return
-        except json.JSONDecodeError:
-            simpledialog.messagebox.showerror("Error", "Invalid JSON file.")
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            messagebox.showerror("Error", str(e))
             return
 
         self.app.clear_canvas()
         self.app.colors = data.get("colors", {})
-        groups = data.get("groups", {})
+        self.app.groups = {group: [] for group in self.app.colors}
 
-        for group_name, group in groups.items():
-            self.app.groups[group_name] = []
-            for comp in group:
-                component = Component(self.app, group=group_name, **comp)
-                component.set_color(self.app.colors[group_name])
-                self.app.groups[group_name].append(component)
+        for comp_data in data.get("components", []):
+            group = comp_data["group"]
+            component = Component(
+                self.app,
+                x=comp_data["x"],
+                y=comp_data["y"],
+                width=self.app.comp_width,
+                height=self.app.comp_height,
+                group=group,
+            )
+            component.set_color(self.app.colors[group])
+            self.app.groups[group].append(component)
 
         self.app.group_menu.update_dropdown()
 
@@ -223,7 +240,7 @@ class FileMenu:
             return
 
         try:
-            data = self.get_layout_data().get("groups", {})
+            data = self.get_layout_data().get("components", [])
             new_print_file(Path(self.app.component_file), Path(output_path), data, is_absolute=is_absolute)
             messagebox.showinfo("Success", f"Print file saved to:\n{output_path}")
         except Exception as e:

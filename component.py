@@ -210,22 +210,15 @@ class Component:
         self.y = int(y)
         self.redraw_for_zoom()
 
-    def to_dict(self) -> dict:
-        """Convert the component to a dictionary.
+    def to_dict(self) -> tuple[int, int]:
+        """Convert the component position to a tuple.
 
         Returns
         -------
-        dict
-            A dictionary representation of the component.
-
+        tuple[int, int]
+            The (x, y) position of the component.
         """
-        return {
-            "x": self.x,
-            "y": self.y,
-            "width": self.width,
-            "height": self.height,
-            "group": self.group,
-        }
+        return (self.x, self.y)
 
     def redraw_for_zoom(self) -> None:
         """Redraw the component for the current zoom level."""
