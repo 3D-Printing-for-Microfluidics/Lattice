@@ -97,7 +97,7 @@ def generate_layer_composites(
     layer_dict["Image settings list"] = new_image_settings
 
 
-def new_print_file(input_path: Path, output_path: Path, layout_data: dict) -> None:
+def new_print_file(input_path: Path, output_path: Path, layout_data: list) -> None:
     """Generate a new print file with scaled exposure settings and composite images, using layout_data.
 
     Input zip file must contain:
@@ -110,19 +110,28 @@ def new_print_file(input_path: Path, output_path: Path, layout_data: dict) -> No
         Path to the input component .zip file.
     output_path : Path
         Path for the output .zip file.
-    layout_data : dict
-        Dictionary containing group definitions.
+    layout_data : list
+        List of components with their groups and positions.
+        Format: [{"group": "1.0", "x": 100, "y": 200}, ...]
 
     """
     if input_path.suffix.lower() != ".zip":
         msg = "Input path must be a .zip file."
         raise ValueError(msg)
+
+    # Convert flat list into group-based dictionary for processing
+    exposure_config = {"groups": {}}
+    for comp in layout_data:
+        group = comp["group"]
+        if group not in exposure_config["groups"]:
+            exposure_config["groups"][group] = []
+        exposure_config["groups"][group].append({"x": comp["x"], "y": comp["y"]})
+
     generated_files = {}
     with zipfile.ZipFile(input_path, "r") as zf:
         with zf.open("print_settings.json") as f:
             original_print_settings = json.load(f)
         new_json = copy.deepcopy(original_print_settings)
-        exposure_config = layout_data
 
         for layer_dict in new_json.get("Layers", []):
             generate_layer_composites_zip(layer_dict, exposure_config, zf, generated_files)
