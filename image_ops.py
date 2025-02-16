@@ -74,7 +74,7 @@ def export_cropped_slices(input_zip: str | Path, output_zip: str | Path, bbox: R
                 zf_out.writestr(name, buf.getvalue())
 
 
-def load_component_dimensions(file_path: str) -> tuple[int, int]:
+def get_component_dimensions(file_path: str) -> tuple[int, int]:
     """Return (width, height) by scanning the slices in a zip file."""
     with zipfile.ZipFile(file_path, "r") as zip_ref:
         for file_name in zip_ref.namelist():
@@ -82,4 +82,5 @@ def load_component_dimensions(file_path: str) -> tuple[int, int]:
                 with zip_ref.open(file_name) as image_file:
                     image = Image.open(image_file)
                     return image.width, image.height
-    raise ValueError("No slices found in zip file.")
+    msg = "No slices found in zip file."
+    raise ValueError(msg)
