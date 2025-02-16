@@ -3,7 +3,6 @@
 import copy
 import io
 import json
-import tempfile
 import zipfile
 from pathlib import Path
 
@@ -98,110 +97,40 @@ def generate_layer_composites(
     layer_dict["Image settings list"] = new_image_settings
 
 
-def new_print_file(input_path: Path, output_path: Path, layout_data: dict, is_absolute: bool = True) -> None:
-    """Generate a new print file with modified exposure settings based on component layout.
+def new_print_file(input_path: Path, output_path: Path, layout_data: dict) -> None:
+    """Generate a new print file with scaled exposure settings and composite images, using layout_data.
+
+    Input zip file must contain:
+      - print_settings.json
+      - a "slices" folder of images
 
     Parameters
     ----------
     input_path : Path
-        Path to the input component zip file.
+        Path to the input component .zip file.
     output_path : Path
-        Path where the new print file will be saved.
+        Path for the output .zip file.
     layout_data : dict
-        Dictionary containing group names and component positions.
-    is_absolute : bool, optional
-        If True, group names are used as absolute exposure times.
-        If False, group names are used as scaling factors for original exposure times.
-        Default is True.
-
-    Raises
-    ------
-    ValueError
-        If multiple components affect the same layer (indicates overlap).
-    """
-    # Create temporary directory for zip operations
-    with tempfile.TemporaryDirectory() as temp_dir:
-        temp_path = Path(temp_dir)
-
-        # Extract input zip
-        with zipfile.ZipFile(input_path, "r") as zip_ref:
-            zip_ref.extractall(temp_path)
-
-        # Load exposure settings
-        settings_path = temp_path / "settings.json"
-        with settings_path.open("r") as f:
-            settings = json.load(f)
-
-        # Get original exposure times for scaling mode
-        original_exposures = {layer["filename"]: layer["exposure_time"] for layer in settings["layers"]}
-
-        # Create mapping of image files to their new exposure times
-        exposure_map = {}
-        for group_name, components in layout_data.items():
-            group_value = float(group_name)
-            for comp in components:
-                x, y = comp["x"], comp["y"]
-                w, h = comp["width"], comp["height"]
-                bbox = (x, y, x + w, y + h)
-
-                # Find all images that this component affects
-                for layer in settings["layers"]:
-                    filename = layer["filename"]
-                    if overlaps_component(temp_path / filename, bbox):
-                        if filename in exposure_map:
-                            raise ValueError(
-                                f"Multiple components affect layer {filename} - components must not overlap"
-                            )
-
-                        if is_absolute:
-                            exposure_map[filename] = group_value
-                        else:  # scaling mode
-                            original_time = original_exposures[filename]
-                            exposure_map[filename] = original_time * group_value
-
-        # Update exposure times in settings
-        for layer in settings["layers"]:
-            filename = layer["filename"]
-            if filename in exposure_map:
-                layer["exposure_time"] = exposure_map[filename]
-
-        # Save modified settings
-        with settings_path.open("w") as f:
-            json.dump(settings, f, indent=4)
-
-        # Create new zip file
-        with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zip_ref:
-            for file_path in temp_path.rglob("*"):
-                if file_path.is_file():
-                    zip_ref.write(file_path, file_path.relative_to(temp_path))
-
-
-def overlaps_component(image_path: Path, bbox: tuple[int, int, int, int]) -> bool:
-    """Check if an image overlaps with a component's bounding box.
-
-    Parameters
-    ----------
-    image_path : Path
-        Path to the image file.
-    bbox : tuple[int, int, int, int]
-        Component bounding box (x1, y1, x2, y2).
-
-    Returns
-    -------
-    bool
-        True if the image overlaps with the component.
+        Dictionary containing group definitions.
 
     """
-    with Image.open(image_path) as img:
-        # Convert image to binary (0 or 255)
-        img = img.convert("L").point(lambda x: 255 if x > 128 else 0, "1")
+    if input_path.suffix.lower() != ".zip":
+        msg = "Input path must be a .zip file."
+        raise ValueError(msg)
+    generated_files = {}
+    with zipfile.ZipFile(input_path, "r") as zf:
+        with zf.open("print_settings.json") as f:
+            original_print_settings = json.load(f)
+        new_json = copy.deepcopy(original_print_settings)
+        exposure_config = layout_data
 
-        # Crop to bounding box
-        x1, y1, x2, y2 = bbox
-        crop = img.crop((x1, y1, x2, y2))
+        for layer_dict in new_json.get("Layers", []):
+            generate_layer_composites_zip(layer_dict, exposure_config, zf, generated_files)
 
-        # Check if there are any white pixels in the cropped region
-        return any(crop.getdata())
+    with zipfile.ZipFile(output_path, "w") as out_zip:
+        out_zip.writestr("print_settings.json", json.dumps(new_json, indent=2))
+        for filename, content in generated_files.items():
+            out_zip.writestr(f"slices/{filename}", content.getvalue())
 
 
 def generate_layer_composites_zip(
