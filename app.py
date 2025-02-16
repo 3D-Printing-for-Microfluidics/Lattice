@@ -1,8 +1,4 @@
-"""UI for 3D Print Dose Customization.
-
-TO DO:
-- Resize all components loaded when loading a new component
-"""
+"""UI for 3D Print Dose Customization."""
 
 from __future__ import annotations
 
