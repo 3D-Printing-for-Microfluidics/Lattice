@@ -38,7 +38,8 @@ def write_image(s: str, x: int, y: int) -> None:
     img.save(filename)
 
 
+xy = 100
 for i in range(1, 6):
-    write_image(i, 250, 250)
-    write_image(f"{i}a", 250, 250)
-write_image("b", 250, 250)
+    write_image(i, xy, xy)
+    write_image(f"{i}a", xy, xy)
+write_image("b", xy, xy)
