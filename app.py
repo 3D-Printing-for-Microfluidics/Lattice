@@ -1,11 +1,7 @@
 """UI for 3D Print Dose Customization.
 
 TO DO:
-- Add absolute vs. scale option for exposure scaling
-- Only allow floats in group names
-- Make cutout tool appear on top, and make submenus appear on top too
 - Resize all components loaded when loading a new component
-- Change component layout file to only include positions
 """
 
 from __future__ import annotations

@@ -120,7 +120,7 @@ class FileMenu:
             component.set_color(self.app.colors[group])
             self.app.groups[group].append(component)
 
-        self.app.group_menu.update_dropdown()
+        self.app.group_menu.build_menu()
 
     def check_component_overlap(self) -> set[Component]:
         """Check if any components overlap.

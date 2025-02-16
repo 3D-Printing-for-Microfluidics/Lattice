@@ -1,7 +1,7 @@
 """App methods in the Group menu."""
 
 import tkinter as tk
-from tkinter import colorchooser, simpledialog
+from tkinter import colorchooser, messagebox, simpledialog
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -36,19 +36,72 @@ class GroupMenu:
 
         self.menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Group", menu=self.menu)
-        self.menu.add_command(label="New Group", command=self.new_group, accelerator="Ctrl+G")
-        self.menu.add_command(label="Delete Group", command=self.delete_group)
-        self.menu.add_separator()
-        self.menu.add_command(label="- Groups -", state=tk.DISABLED)
-        # ...existing logic for populating groups can be placed here...
-        self.menu.add_command(label="Rename Group", command=self.rename_group)
-        self.menu.add_command(label="Change Group Color", command=self.set_group_color)
-        self.menu.add_command(label="Change Selection to Current Group", command=self.change_group)
+        self.build_menu()
 
         # Bind shortcuts here
         self.app.root.bind_all("<Control-g>", lambda _: self.new_group())
 
-    def update_dropdown(self) -> None:
+    def _validate_group_name(self, name: str) -> bool:
+        """Validate that a group name is a positive float and not a duplicate.
+
+        Parameters
+        ----------
+        name : str
+            The group name to validate.
+
+        Returns
+        -------
+        bool
+            True if name is valid, False otherwise.
+
+        """
+        try:
+            value = float(name)
+        except ValueError:
+            messagebox.showerror("Invalid Group Name", "Group name must be a valid number.")
+            return False
+        if value <= 0:
+            messagebox.showerror("Invalid Group Name", "Group name must be a positive number.")
+            return False
+        if name in self.app.groups:
+            messagebox.showerror("Error", "A group with this name already exists.")
+            return False
+        return True
+
+    def _check_group_selected(self) -> str | None:
+        """Check if a group is selected and show error if not.
+
+        Returns
+        -------
+        str | None
+            The selected group name, or None if no group selected.
+
+        """
+        group = self.current_group.get()
+        if not group:
+            messagebox.showerror("Error", "No group is selected.")
+            return None
+        return group
+
+    @staticmethod
+    def _prompt_group_name(title: str) -> str:
+        """Prompt the user for a new group name.
+
+        Parameters
+        ----------
+        title: str
+            The title of the popup window.
+
+        Returns
+        -------
+        str
+            The name entered by the user.
+
+        """
+        msg = "Enter a name for the group. This will be the exposure scale:"
+        return simpledialog.askstring(title, msg)
+
+    def build_menu(self) -> None:
         """Rebuild the group menu items, showing updated group/color entries."""
         self.menu.delete(0, "end")
         self.menu.add_command(label="New Group", command=self.new_group, accelerator="Ctrl+G")
@@ -77,12 +130,10 @@ class GroupMenu:
 
     def new_group(self) -> None:
         """Create a new group."""
-        group_name = simpledialog.askstring("Group Name", "Enter a name for the new group:")
+        group_name = self._prompt_group_name("New Group")
         if not group_name:
-            simpledialog.messagebox.showerror("Error", "Please enter a name for the group.")
             return
-        if group_name in self.app.groups:
-            simpledialog.messagebox.showerror("Error", "Group already exists.")
+        if not self._validate_group_name(group_name):
             return
         prev_group = self.current_group.get()
         self.current_group.set(group_name)
@@ -92,8 +143,7 @@ class GroupMenu:
             simpledialog.messagebox.showerror("Error", "Please select a color for the new group.")
             return
         self.app.groups[group_name] = []
-        self.update_dropdown()
-        self.update_dropdown()
+        self.build_menu()
 
     def delete_group(self) -> None:
         """Delete the currently selected group and its components."""
@@ -109,45 +159,48 @@ class GroupMenu:
                 comp.delete()
             del self.app.groups[group]
             del self.app.colors[group]
-            self.update_dropdown()
+            self.build_menu()
             self.app.deselect_all()
-            self.update_dropdown()
+            self.build_menu()
 
     def rename_group(self) -> None:
-        """Rename the current group."""
-        current_group = self.current_group.get()
-        if not current_group:
-            simpledialog.messagebox.showerror("Error", "No group is selected.")
+        """Rename the currently selected group."""
+        old_name = self._check_group_selected()
+        if not old_name:
             return
-        new = simpledialog.askstring("Rename Group", f"Enter a new name for Group '{current_group}':")
-        if new and new != current_group:
-            self.app.groups[new] = self.app.groups.pop(current_group, [])
-            self.app.colors[new] = self.app.colors.pop(current_group, "blue")
-            self.update_dropdown()
-            for comp in self.app.groups[new]:
-                comp.set_group(new)
-            self.app.update_label(None)
-            self.update_dropdown()
+
+        new_name = self._prompt_group_name("Rename Group")
+        if not new_name or new_name == old_name:
+            return
+
+        if not self._validate_group_name(new_name):
+            return
+
+        self.app.groups[new_name] = self.app.groups.pop(old_name)
+        self.app.colors[new_name] = self.app.colors.pop(old_name)
+        for comp in self.app.groups[new_name]:
+            comp.group = new_name
+        self.build_menu()
+        self.current_group.set(new_name)
+        self.app.update_label(self.app.selection[0])
 
     def set_group_color(self) -> None:
         """Set the color of the current group."""
-        group = self.current_group.get()
+        group = self._check_group_selected()
         if not group:
-            simpledialog.messagebox.showerror("Error", "No group is selected.")
             return
         color = colorchooser.askcolor()[1]
-        if color:
-            self.app.colors[group] = color
-            for comp in self.app.groups.get(group, []):
-                comp.set_color(color)
-        self.update_dropdown()
-        self.update_dropdown()
+        if not color:
+            return
+        self.app.colors[group] = color
+        for comp in self.app.groups.get(group, []):
+            comp.set_color(color)
+        self.build_menu()
 
     def change_group(self) -> None:
         """Change the group of the selected components to the current group."""
-        new_group = self.current_group.get()
+        new_group = self._check_group_selected()
         if not new_group:
-            simpledialog.messagebox.showerror("Error", "No group is selected.")
             return
 
         for comp in self.app.selection:
@@ -155,7 +208,6 @@ class GroupMenu:
             comp.set_group(new_group)
             self.app.groups[new_group].append(comp)
         self.app.update_label(self.app.selection[0])
-        # no need to rebuild the entire menu here
 
     @staticmethod
     def create_color_box(color: str) -> tk.PhotoImage:
