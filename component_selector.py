@@ -6,30 +6,7 @@ from tkinter import filedialog, messagebox
 from PIL import ImageTk
 
 from image_ops import export_cropped_slices, find_white_regions, merge_slices
-
-
-class ProcessingPopup:
-    """A simple popup window showing a processing message."""
-
-    def __init__(self, parent: tk.Tk, message: str = "Processing images...") -> None:
-        """Initialize and open the popup."""
-        self.popup = tk.Toplevel(parent)
-        self.popup.title("Processing")
-        # Center the popup on screen
-        w, h = 200, 50
-        ws = parent.winfo_screenwidth()
-        hs = parent.winfo_screenheight()
-        x = (ws / 2) - (w / 2)
-        y = (hs / 2) - (h / 2)
-        self.popup.geometry(f"{w}x{h}+{int(x)}+{int(y)}")
-        tk.Label(self.popup, text=message, padx=20, pady=10).pack()
-        self.popup.transient(parent)
-        self.popup.grab_set()
-        parent.update()
-
-    def destroy(self) -> None:
-        """Close the popup."""
-        self.popup.destroy()
+from popup import Popup
 
 
 class ComponentSelector:
@@ -66,7 +43,7 @@ class ComponentSelector:
         self.preview_canvas_img = None
 
         # Load and process image with popup
-        popup = ProcessingPopup(self.root)
+        popup = Popup(self.root, message="Processing images...")
         try:
             self.original_img = merge_slices(self.input_zip)
             self.regions_data = find_white_regions(self.original_img)
@@ -210,7 +187,7 @@ class ComponentSelector:
         )
         if not out_zip:
             return
-        popup = ProcessingPopup(self.root, "Exporting images...")
+        popup = Popup(self.root, "Exporting images...")
         try:
             export_cropped_slices(self.input_zip, out_zip, self.selected_bbox)
         finally:
