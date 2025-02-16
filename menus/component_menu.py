@@ -1,48 +1,32 @@
-"""App methods in the Object menu."""
+"""App methods in the Component menu."""
 
 import tkinter as tk
 from tkinter import messagebox, simpledialog
 from typing import TYPE_CHECKING
 
 from component import Component
+from menus.menu import Menu
 from tile_dialog import TileDialog
 
 if TYPE_CHECKING:
     from app import App
 
 
-class ComponentMenu:
-    """Create and handle the Component (Object) menu and its actions.
+class ComponentMenu(Menu):
+    """Create and handle the Component menu and its actions."""
 
-    Attributes
-    ----------
-    app : App
-        The parent application instance.
+    def _create_menu(self, menubar) -> None:
+        """Create the component menu items."""
+        menubar.add_cascade(label="Component", menu=self.menu)
+        self.menu.add_command(label="Add", command=self.add_component, accelerator="Insert")
+        self.menu.add_command(label="Delete", command=self.delete_component, accelerator="Delete")
+        self.menu.add_separator()
+        self.menu.add_command(label="Tile create", command=self.tile)
+        self.menu.add_separator()
+        self.menu.add_command(label="Component cutout tool", command=self.run_cutout_tool)
 
-    """
-
-    def __init__(self, app: "App", menubar: tk.Menu) -> None:
-        """Initialize the ComponentMenu class.
-
-        Parameters
-        ----------
-        app : App
-            The application instance.
-        menubar : tk.Menu
-            The Tkinter menubar to which the Component menu is added.
-
-        """
-        self.app = app
-        menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Component", menu=menu)
-        menu.add_command(label="Add", command=self.add_component, accelerator="Insert")
-        menu.add_command(label="Delete", command=self.delete_component, accelerator="Delete")
-        menu.add_separator()
-        menu.add_command(label="Tile create", command=self.tile)
-        menu.add_separator()
-        menu.add_command(label="Component cutout tool", command=self.run_cutout_tool)
-
-        # Bind shortcuts here
+    def _bind_shortcuts(self) -> None:
+        """Bind keyboard shortcuts."""
         self.app.root.bind_all("<Insert>", lambda _: self.add_component())
         self.app.root.bind_all("<Delete>", lambda _: self.delete_component())
 

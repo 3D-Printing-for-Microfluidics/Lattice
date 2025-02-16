@@ -4,40 +4,26 @@ import json
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
-from typing import TYPE_CHECKING
 
 from component import Component
 from gen_print_file import new_print_file
 from image_ops import get_component_dimensions
+from menus.menu import Menu
 from popup import Popup
 
-if TYPE_CHECKING:
-    from app import App
 
+class FileMenu(Menu):
+    """Create and handle the File menu and its actions."""
 
-class FileMenu:
-    """Create and handle the File menu and its actions.
-
-    Attributes
-    ----------
-    app : App
-        The parent application instance.
-
-    """
-
-    def __init__(self, app: "App", menubar: tk.Menu) -> None:
-        """Initialize the FileMenu class.
+    def _create_menu(self, menubar: tk.Menu) -> None:
+        """Create the file menu items.
 
         Parameters
         ----------
-        app : App
-            The application instance.
-        menubar : tk.Menu
-            The Tkinter menubar to which the File menu is added.
+        menubar: tk.Menu
+            The menubar to attach to.
 
         """
-        self.app = app
-        self.menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="File", menu=self.menu)
         self.menu.add_command(label="Load component", command=self.load_component, accelerator="Ctrl+C")
         self.menu.add_command(label="Open Layout", command=self.load_json, accelerator="Ctrl+O")
@@ -47,6 +33,8 @@ class FileMenu:
         self.menu.add_separator()
         self.menu.add_command(label="Exit", command=self.app.root.quit)
 
+    def _bind_shortcuts(self) -> None:
+        """Bind keyboard shortcuts."""
         self.app.root.bind_all("<Control-c>", lambda _: self.load_component())
         self.app.root.bind_all("<Control-o>", lambda _: self.load_json())
         self.app.root.bind_all("<Control-s>", lambda _: self.save_json())

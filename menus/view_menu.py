@@ -1,33 +1,21 @@
 """App methods in the View menu."""
 
 import tkinter as tk
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from app import App
+from menus.menu import Menu
 
 
-class ViewMenu:
+class ViewMenu(Menu):
     """Create and handle the View menu and its actions."""
 
-    def __init__(self, app: "App", menubar: tk.Menu) -> None:
-        """Initialize the ViewMenu class.
+    def _create_menu(self, menubar: tk.Menu) -> None:
+        """Create the view menu items."""
+        menubar.add_cascade(label="View", menu=self.menu)
+        self.menu.add_command(label="Zoom In", command=self.zoom_in, accelerator="Ctrl+=")
+        self.menu.add_command(label="Zoom Out", command=self.zoom_out, accelerator="Ctrl+-")
 
-        Parameters
-        ----------
-        app : App
-            The application instance.
-        menubar : tk.Menu
-            The Tkinter menubar to which the View menu is added.
-
-        """
-        self.app = app
-        menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="View", menu=menu)
-        menu.add_command(label="Zoom In", command=self.zoom_in, accelerator="Ctrl+=")
-        menu.add_command(label="Zoom Out", command=self.zoom_out, accelerator="Ctrl+-")
-
-        # Bind shortcuts
+    def _bind_shortcuts(self) -> None:
+        """Bind keyboard shortcuts."""
         self.app.root.bind_all("<Control-equal>", lambda _: self.zoom_in())
         self.app.root.bind_all("<Control-minus>", lambda _: self.zoom_out())
 

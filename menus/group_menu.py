@@ -7,8 +7,10 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from app import App
 
+from menus.menu import Menu
 
-class GroupMenu:
+
+class GroupMenu(Menu):
     """Create and handle the Group menu and its actions.
 
     Attributes
@@ -31,14 +33,16 @@ class GroupMenu:
             The Tkinter menubar to which the Group menu is added.
 
         """
-        self.app = app
+        super().__init__(app, menubar)
         self.current_group = tk.StringVar()
 
-        self.menu = tk.Menu(menubar, tearoff=0)
+    def _create_menu(self, menubar: tk.Menu) -> None:
+        """Create the group menu items."""
         menubar.add_cascade(label="Group", menu=self.menu)
         self.build_menu()
 
-        # Bind shortcuts here
+    def _bind_shortcuts(self) -> None:
+        """Bind keyboard shortcuts."""
         self.app.root.bind_all("<Control-g>", lambda _: self.new_group())
 
     def _validate_group_name(self, name: str) -> bool:

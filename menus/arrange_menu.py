@@ -2,44 +2,33 @@
 
 import tkinter as tk
 from tkinter import simpledialog
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from app import App
+from menus.menu import Menu
 
 
-class ArrangeMenu:
-    """Create and handle the Arrange menu and its actions.
+class ArrangeMenu(Menu):
+    """Create and handle the Arrange menu and its actions."""
 
-    Attributes
-    ----------
-    app : App
-        The parent application instance.
-
-    """
-
-    def __init__(self, app: "App", menubar: tk.Menu) -> None:
-        """Initialize the ArrangeMenu class and bind keyboard shortcuts.
+    def _create_menu(self, menubar: tk.Menu) -> None:
+        """Create the arrange menu items.
 
         Parameters
         ----------
-        app : App
-            The application instance.
-        menubar : tk.Menu
-            The Tkinter menubar to which the Arrange menu is added.
+        menubar: tk.Menu
+            The menubar to attach to.
 
         """
-        self.app = app
-        menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="Arrange", menu=menu)
-        menu.add_command(label="Set X", command=self.set_x, accelerator="Ctrl+X")
-        menu.add_command(label="Set Y", command=self.set_y, accelerator="Ctrl+Y")
-        menu.add_separator()
-        menu.add_command(label="Align Left", command=self.align_left, accelerator="Ctrl+L")
-        menu.add_command(label="Align Right", command=self.align_right, accelerator="Ctrl+R")
-        menu.add_command(label="Align Top", command=self.align_top, accelerator="Ctrl+T")
-        menu.add_command(label="Align Bottom", command=self.align_bottom, accelerator="Ctrl+B")
+        menubar.add_cascade(label="Arrange", menu=self.menu)
+        self.menu.add_command(label="Set X", command=self.set_x, accelerator="Ctrl+X")
+        self.menu.add_command(label="Set Y", command=self.set_y, accelerator="Ctrl+Y")
+        self.menu.add_separator()
+        self.menu.add_command(label="Align Left", command=self.align_left, accelerator="Ctrl+L")
+        self.menu.add_command(label="Align Right", command=self.align_right, accelerator="Ctrl+R")
+        self.menu.add_command(label="Align Top", command=self.align_top, accelerator="Ctrl+T")
+        self.menu.add_command(label="Align Bottom", command=self.align_bottom, accelerator="Ctrl+B")
 
+    def _bind_shortcuts(self) -> None:
+        """Bind keyboard shortcuts."""
         self.app.root.bind_all("<Control-x>", lambda _: self.set_x())
         self.app.root.bind_all("<Control-y>", lambda _: self.set_y())
         self.app.root.bind_all("<Control-l>", lambda _: self.align_left())
