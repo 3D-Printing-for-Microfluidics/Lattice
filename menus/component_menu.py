@@ -21,9 +21,9 @@ class ComponentMenu(Menu):
         self.menu.add_command(label="Add", command=self.add_component, accelerator="Insert")
         self.menu.add_command(label="Delete", command=self.delete_component, accelerator="Delete")
         self.menu.add_separator()
-        self.menu.add_command(label="Tile create", command=self.tile)
+        self.menu.add_command(label="Tile Create", command=self.tile)
         self.menu.add_separator()
-        self.menu.add_command(label="Component cutout tool", command=self.run_cutout_tool)
+        self.menu.add_command(label="Component Cutout Tool", command=self.run_cutout_tool)
 
     def _bind_shortcuts(self) -> None:
         """Bind keyboard shortcuts."""

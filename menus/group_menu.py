@@ -44,6 +44,7 @@ class GroupMenu(Menu):
     def _bind_shortcuts(self) -> None:
         """Bind keyboard shortcuts."""
         self.app.root.bind_all("<Control-g>", lambda _: self.new_group())
+        self.app.root.bind_all("<Control-c>", lambda _: self.change_group())
 
     def _validate_group_name(self, name: str) -> bool:
         """Validate that a group name is a positive float and not a duplicate.
@@ -128,7 +129,11 @@ class GroupMenu(Menu):
             )
         self.menu.add_command(label="Rename Group", command=self.rename_group)
         self.menu.add_command(label="Change Group Color", command=self.set_group_color)
-        self.menu.add_command(label="Change Selection to Current Group", command=self.change_group)
+        self.menu.add_command(
+            label="Change Selection to Current Group",
+            command=self.change_group,
+            accelerator="Ctrl+C",
+        )
         if self.app.groups:
             self.current_group.set(list(self.app.groups.keys())[-1])
 

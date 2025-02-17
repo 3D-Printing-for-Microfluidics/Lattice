@@ -57,21 +57,40 @@ A graphical tool for arranging and customizing components for 3D printing with d
 
 ## Keyboard Shortcuts
 
+### Component Management
+
 - `Insert`: Add new component
 - `Delete`: Remove selected component(s)
-- `Ctrl+=`: Zoom in
-- `Ctrl+-`: Zoom out
-- `Ctrl+G`: Create new group
+- `Ctrl+L`: Load component file
+
+### File Operations
+
 - `Ctrl+S`: Save layout
 - `Ctrl+O`: Open layout
-- `Ctrl+L`: Align selected components left
-- `Ctrl+R`: Align selected components right
-- `Ctrl+T`: Align selected components top
-- `Ctrl+B`: Align selected components bottom
-- `Ctrl+X`: Set X position for selected components
-- `Ctrl+Y`: Set Y position for selected components
-- Shift click to select multiple components
-- Click and drag to select with a selection box
+
+### View Controls
+
+- `Ctrl+=`: Zoom in
+- `Ctrl+-`: Zoom out
+
+### Group Management
+
+- `Ctrl+G`: Create new group
+- `Ctrl+C`: Change selected components to current group
+
+### Alignment (of currently selected components)
+
+- `Ctrl+←`: Align left
+- `Ctrl+→`: Align right
+- `Ctrl+↑`: Align top
+- `Ctrl+↓`: Align bottom
+- `Ctrl+X`: Set X position
+- `Ctrl+Y`: Set Y position
+
+### Selection
+
+- `Shift+Click`: Select multiple components
+- `Click+Drag`: Select with selection box
 
 ## Notes
 

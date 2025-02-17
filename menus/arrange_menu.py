@@ -22,19 +22,19 @@ class ArrangeMenu(Menu):
         self.menu.add_command(label="Set X", command=self.set_x, accelerator="Ctrl+X")
         self.menu.add_command(label="Set Y", command=self.set_y, accelerator="Ctrl+Y")
         self.menu.add_separator()
-        self.menu.add_command(label="Align Left", command=self.align_left, accelerator="Ctrl+L")
-        self.menu.add_command(label="Align Right", command=self.align_right, accelerator="Ctrl+R")
-        self.menu.add_command(label="Align Top", command=self.align_top, accelerator="Ctrl+T")
-        self.menu.add_command(label="Align Bottom", command=self.align_bottom, accelerator="Ctrl+B")
+        self.menu.add_command(label="Align Left", command=self.align_left, accelerator="Ctrl+←")
+        self.menu.add_command(label="Align Right", command=self.align_right, accelerator="Ctrl+→")
+        self.menu.add_command(label="Align Top", command=self.align_top, accelerator="Ctrl+↑")
+        self.menu.add_command(label="Align Bottom", command=self.align_bottom, accelerator="Ctrl+↓")
 
     def _bind_shortcuts(self) -> None:
         """Bind keyboard shortcuts."""
         self.app.root.bind_all("<Control-x>", lambda _: self.set_x())
         self.app.root.bind_all("<Control-y>", lambda _: self.set_y())
-        self.app.root.bind_all("<Control-l>", lambda _: self.align_left())
-        self.app.root.bind_all("<Control-r>", lambda _: self.align_right())
-        self.app.root.bind_all("<Control-t>", lambda _: self.align_top())
-        self.app.root.bind_all("<Control-b>", lambda _: self.align_bottom())
+        self.app.root.bind_all("<Control-Left>", lambda _: self.align_left())
+        self.app.root.bind_all("<Control-Right>", lambda _: self.align_right())
+        self.app.root.bind_all("<Control-Up>", lambda _: self.align_top())
+        self.app.root.bind_all("<Control-Down>", lambda _: self.align_bottom())
 
     def align_left(self) -> None:
         """Align selected components to the left."""

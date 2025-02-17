@@ -25,17 +25,17 @@ class FileMenu(Menu):
 
         """
         menubar.add_cascade(label="File", menu=self.menu)
-        self.menu.add_command(label="Load component", command=self.load_component, accelerator="Ctrl+C")
+        self.menu.add_command(label="Load Component", command=self.load_component, accelerator="Ctrl+L")
         self.menu.add_command(label="Open Layout", command=self.load_json, accelerator="Ctrl+O")
         self.menu.add_command(label="Save Layout", command=self.save_json, accelerator="Ctrl+S")
         self.menu.add_separator()
-        self.menu.add_command(label="Generate print file", command=self.generate_print_file)
+        self.menu.add_command(label="Generate Print File", command=self.generate_print_file)
         self.menu.add_separator()
         self.menu.add_command(label="Exit", command=self.app.root.quit)
 
     def _bind_shortcuts(self) -> None:
         """Bind keyboard shortcuts."""
-        self.app.root.bind_all("<Control-c>", lambda _: self.load_component())
+        self.app.root.bind_all("<Control-l>", lambda _: self.load_component())
         self.app.root.bind_all("<Control-o>", lambda _: self.load_json())
         self.app.root.bind_all("<Control-s>", lambda _: self.save_json())
 
