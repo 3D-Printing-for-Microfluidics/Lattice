@@ -9,28 +9,11 @@ from pathlib import Path
 from PIL import Image, ImageChops
 
 from constants import CANVAS_HEIGHT, CANVAS_WIDTH
-
-
-def load_json(filepath: Path) -> dict:
-    """Load and return JSON data from the given filepath.
-
-    Parameters
-    ----------
-    filepath : Path
-        The path to the JSON file.
-
-    Returns
-    -------
-    dict
-        Parsed JSON content as a dictionary.
-
-    """
-    with filepath.open() as f:
-        return json.load(f)
+from exposure_optimizer import optimize_print_file
 
 
 def compose_group_image(base_image: Image.Image, group_settings: list[dict]) -> Image.Image:
-    """Create a composite image by placing the base image in multiple positions based on group_settings.
+    """Create a composite image by placing the base image in multiple positions.
 
     Parameters
     ----------
@@ -61,18 +44,23 @@ def generate_layer_composites(
     input_images_dir: Path,
     output_dir: Path,
 ) -> None:
-    """Generate new image settings for each group and updates the layer_dict.
+    """Generate new image settings for each group and update the layer_dict.
 
     Parameters
     ----------
     layer_dict : dict
-        Dictionary representing layer settings.
+        Dictionary representing layer settings. This is modified in place.
     exposure_config : dict
         Exposure configuration to determine offsets and exposure scaling.
     input_images_dir : Path
         Path to the directory containing input images.
     output_dir : Path
         Path to the directory where new images will be saved.
+
+    Returns
+    -------
+    None
+        Modifies layer_dict in place.
 
     """
     new_image_settings = []
@@ -97,8 +85,8 @@ def generate_layer_composites(
     layer_dict["Image settings list"] = new_image_settings
 
 
-def new_print_file(input_path: Path, output_path: Path, layout_data: list) -> None:
-    """Generate a new print file with scaled exposure settings and composite images, using layout_data.
+def new_print_file(input_path: Path, output_path: Path, layout_data: list, *, optimize_layers: bool = False) -> None:
+    """Generate a new print file with scaled exposure settings and composite images.
 
     Input zip file must contain:
       - print_settings.json
@@ -112,7 +100,14 @@ def new_print_file(input_path: Path, output_path: Path, layout_data: list) -> No
         Path for the output .zip file.
     layout_data : list
         List of components with their groups and positions.
-        Format: [{"group": "1.0", "x": 100, "y": 200}, ...]
+        Format: [{"group": "1.0", "x": 100, "y": 200}, ...].
+    optimize_layers : bool, optional
+        If True, run additional layer optimization, by default False.
+
+    Returns
+    -------
+    None
+        Creates a new zip file at output_path.
 
     """
     if input_path.suffix.lower() != ".zip":
@@ -127,18 +122,21 @@ def new_print_file(input_path: Path, output_path: Path, layout_data: list) -> No
             exposure_config["groups"][group] = []
         exposure_config["groups"][group].append({"x": comp["x"], "y": comp["y"]})
 
-    generated_files = {}
+    new_images: dict[str | Image.Image] = {}
     with zipfile.ZipFile(input_path, "r") as zf:
         with zf.open("print_settings.json") as f:
-            original_print_settings = json.load(f)
-        new_json = copy.deepcopy(original_print_settings)
+            print_settings = json.load(f)
 
-        for layer_dict in new_json.get("Layers", []):
-            generate_layer_composites_zip(layer_dict, exposure_config, zf, generated_files)
+        for layer_dict in print_settings.get("Layers", []):
+            generate_layer_composites_zip(layer_dict, exposure_config, zf, new_images)
+
+            # Optimize if requested
+        if optimize_layers:
+            optimize_print_file(print_settings, new_images)
 
     with zipfile.ZipFile(output_path, "w") as out_zip:
-        out_zip.writestr("print_settings.json", json.dumps(new_json, indent=2))
-        for filename, content in generated_files.items():
+        out_zip.writestr("print_settings.json", json.dumps(print_settings, indent=2))
+        for filename, content in new_images.items():
             out_zip.writestr(f"slices/{filename}", content.getvalue())
 
 
@@ -146,20 +144,25 @@ def generate_layer_composites_zip(
     layer_dict: dict,
     exposure_config: dict,
     zf: zipfile.ZipFile,
-    generated_files: dict,
+    new_images: dict,
 ) -> None:
-    """Generate new image settings for each group and updates the layer_dict.
+    """Generate new image settings for each group and update the layer_dict.
 
     Parameters
     ----------
     layer_dict : dict
-        Dictionary representing layer settings.
+        Dictionary representing layer settings. Modified in place.
     exposure_config : dict
         Exposure configuration to determine offsets and exposure scaling.
     zf : zipfile.ZipFile
         The input zip file.
-    generated_files : dict
-        Dictionary mapping the filename to BytesIO of the generated images.
+    new_images : dict
+        Dictionary mapping filenames to BytesIO objects of generated images. Modified in place.
+
+    Returns
+    -------
+    None
+        Modifies layer_dict and new_images in place.
 
     """
     original_settings = layer_dict.get("Image settings list", [])
@@ -180,7 +183,7 @@ def generate_layer_composites_zip(
             img_bytes = io.BytesIO()
             composite_img.save(img_bytes, format=ext.upper())
             img_bytes.seek(0)  # reset pointer for later reading
-            generated_files[out_filename] = img_bytes
+            new_images[out_filename] = img_bytes
 
             new = copy.deepcopy(old)
             new["Image file"] = out_filename
@@ -192,7 +195,14 @@ def generate_layer_composites_zip(
 
 
 def main() -> None:
-    """Generate a new print file with scaled exposure settings and composite images."""
+    """Generate a new print file with scaled exposure settings and composite images.
+
+    Returns
+    -------
+    None
+        Creates a new zip file with optimized print settings.
+
+    """
     new_print_file(
         input_path=Path("test_files/small_test.zip"),
         output_path=Path("test_files/small_test_result.zip"),
