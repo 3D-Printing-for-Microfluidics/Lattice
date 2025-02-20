@@ -9,8 +9,8 @@ from typing import Any
 import pytest
 from PIL import Image
 
-from constants import CANVAS_HEIGHT, CANVAS_WIDTH
-from exposure_optimizer import (
+from src.constants import CANVAS_HEIGHT, CANVAS_WIDTH
+from src.exposure_optimizer import (
     check_group_overlaps,
     group_by_settings,
     optimize_layer,
