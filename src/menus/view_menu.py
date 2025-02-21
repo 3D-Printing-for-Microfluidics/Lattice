@@ -2,7 +2,7 @@
 
 import tkinter as tk
 
-from menus.menu import Menu
+from src.menus.menu import Menu
 
 
 class ViewMenu(Menu):

@@ -7,12 +7,12 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from typing import TYPE_CHECKING
 
-from constants import CANVAS_HEIGHT, CANVAS_WIDTH
-from menus.arrange_menu import ArrangeMenu
-from menus.component_menu import ComponentMenu
-from menus.file_menu import FileMenu
-from menus.group_menu import GroupMenu
-from menus.view_menu import ViewMenu
+from src.constants import CANVAS_HEIGHT, CANVAS_WIDTH
+from src.menus.arrange_menu import ArrangeMenu
+from src.menus.component_menu import ComponentMenu
+from src.menus.file_menu import FileMenu
+from src.menus.group_menu import GroupMenu
+from src.menus.view_menu import ViewMenu
 
 if TYPE_CHECKING:
     from component import Component

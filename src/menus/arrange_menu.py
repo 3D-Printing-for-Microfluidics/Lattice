@@ -3,7 +3,7 @@
 import tkinter as tk
 from tkinter import simpledialog
 
-from menus.menu import Menu
+from src.menus.menu import Menu
 
 
 class ArrangeMenu(Menu):

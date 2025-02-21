@@ -5,11 +5,11 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
-from component import Component
-from gen_print_file import new_print_file
-from image_ops import get_component_dimensions
-from menus.menu import Menu
-from popup import Popup
+from src.component import Component
+from src.gen_print_file import new_print_file
+from src.image_ops import get_component_dimensions
+from src.menus.menu import Menu
+from src.popup import Popup
 
 
 class FileMenu(Menu):
