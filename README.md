@@ -92,6 +92,24 @@ A graphical tool for arranging and customizing components for 3D printing with d
 - `Shift+Click`: Select multiple components
 - `Click+Drag`: Select with selection box
 
+## Testing
+
+### Running Tests
+
+- Run all tests with: `pytest`
+- Run a specific test file: `pytest tests/test_file.py`
+- Run tests in watch mode: `pytest-watch`
+- Run tests with detailed output: `pytest -v`
+- Run tests matching a specific name: `pytest -k "test_name"`
+
+### Test Coverage
+
+To generate and view test coverage reports:
+
+1. Generate coverage report: `pytest --cov=src tests/`
+2. Generate detailed HTML report: `pytest --cov=src --cov-report=html tests/`
+3. View the HTML report in `htmlcov/index.html`
+
 ## Notes
 
 - Components cannot overlap in the final layout
