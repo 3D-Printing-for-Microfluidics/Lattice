@@ -8,8 +8,8 @@ from pathlib import Path
 
 from PIL import Image, ImageChops
 
-from constants import CANVAS_HEIGHT, CANVAS_WIDTH
-from exposure_optimizer import optimize_print_file
+from src.constants import CANVAS_HEIGHT, CANVAS_WIDTH
+from src.exposure_optimizer import optimize_print_file
 
 
 def compose_group_image(base_image: Image.Image, group_settings: list[dict]) -> Image.Image:

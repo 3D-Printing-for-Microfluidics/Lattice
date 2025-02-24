@@ -27,10 +27,10 @@ def test_component_zip(tmp_path: Path) -> Path:
                         {
                             "Image file": "slice_1.png",
                             "Layer exposure time (ms)": 1000,
-                        }
+                        },
                     ],
-                }
-            ]
+                },
+            ],
         }
         zf.writestr("print_settings.json", json.dumps(settings))
 
@@ -88,9 +88,9 @@ def test_new_print_file_group_scaling(tmp_path: Path, test_component_zip: Path) 
     """Test exposure scaling based on group names."""
     output_path = tmp_path / "output.zip"
     components = [
-        {"x": 0, "y": 0, "group": "1.0"},  # Normal exposure
-        {"x": 200, "y": 0, "group": "2.0"},  # Double exposure
-        {"x": 400, "y": 0, "group": "0.5"},  # Half exposure
+        {"x": 0, "y": 0, "group": "100"},  # Normal exposure (100%)
+        {"x": 200, "y": 0, "group": "200"},  # Double exposure (200%)
+        {"x": 400, "y": 0, "group": "50"},  # Half exposure (50%)
     ]
 
     new_print_file(test_component_zip, output_path, components)
@@ -99,10 +99,11 @@ def test_new_print_file_group_scaling(tmp_path: Path, test_component_zip: Path) 
         settings = json.loads(zf.read("print_settings.json"))
 
         # Get all exposures from all layers
-        exposures = []
-        for layer in settings["Layers"]:
-            for setting in layer["Image settings list"]:
-                exposures.append(setting["Layer exposure time (ms)"])
+        exposures = [
+            setting["Layer exposure time (ms)"]
+            for layer in settings["Layers"]
+            for setting in layer["Image settings list"]
+        ]
 
         found_exposures = set(exposures)
         base_exposure = 1000  # Original exposure from test_component_zip
