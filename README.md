@@ -106,8 +106,8 @@ A graphical tool for arranging and customizing components for 3D printing with d
 
 To generate and view test coverage reports:
 
-1. Generate coverage report: `pytest --cov=src tests/`
-2. Generate detailed HTML report: `pytest --cov=src --cov-report=html tests/`
+1. Generate coverage report: `pytest --cov=app tests/`
+2. Generate detailed HTML report: `pytest --cov=app --cov-report=html tests/`
 3. View the HTML report in `htmlcov/index.html`
 
 ## Notes

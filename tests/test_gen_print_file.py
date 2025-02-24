@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from src.gen_print_file import new_print_file
+from app.gen_print_file import new_print_file
 
 
 @pytest.fixture

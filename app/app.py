@@ -7,12 +7,12 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 from typing import TYPE_CHECKING
 
-from src.constants import CANVAS_HEIGHT, CANVAS_WIDTH
-from src.menus.arrange_menu import ArrangeMenu
-from src.menus.component_menu import ComponentMenu
-from src.menus.file_menu import FileMenu
-from src.menus.group_menu import GroupMenu
-from src.menus.view_menu import ViewMenu
+from app.constants import CANVAS_HEIGHT, CANVAS_WIDTH
+from app.menus.arrange_menu import ArrangeMenu
+from app.menus.component_menu import ComponentMenu
+from app.menus.file_menu import FileMenu
+from app.menus.group_menu import GroupMenu
+from app.menus.view_menu import ViewMenu
 
 if TYPE_CHECKING:
     from component import Component
@@ -235,5 +235,9 @@ class App:
         return filedialog.askopenfilename(title="Select component zip file.", filetypes=[("Zip", "*.zip")])
 
 
-if __name__ == "__main__":
+def main():
     App()
+
+
+if __name__ == "__main__":
+    main()

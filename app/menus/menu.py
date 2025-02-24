@@ -4,7 +4,7 @@ import tkinter as tk
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from src.app import App
+    from app.app import App
 
 
 class Menu:

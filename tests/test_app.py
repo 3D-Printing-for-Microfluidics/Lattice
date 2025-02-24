@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.app import App
-from src.component import Component
-from src.constants import CANVAS_HEIGHT, CANVAS_WIDTH
+from app.app import App
+from app.component import Component
+from app.constants import CANVAS_HEIGHT, CANVAS_WIDTH
 
 
 @pytest.fixture

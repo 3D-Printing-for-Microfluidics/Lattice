@@ -4,12 +4,12 @@ import tkinter as tk
 from tkinter import messagebox, simpledialog
 from typing import TYPE_CHECKING
 
-from src.component import Component
-from src.menus.menu import Menu
-from src.tile_dialog import TileDialog
+from app.component import Component
+from app.menus.menu import Menu
+from app.tile_dialog import TileDialog
 
 if TYPE_CHECKING:
-    from src.app import App
+    from app.app import App
 
 
 class ComponentMenu(Menu):

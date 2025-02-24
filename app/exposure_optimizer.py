@@ -10,7 +10,7 @@ from typing import Any
 
 from PIL import Image, ImageChops
 
-from src.constants import CANVAS_HEIGHT, CANVAS_WIDTH
+from app.constants import CANVAS_HEIGHT, CANVAS_WIDTH
 
 
 def group_by_settings(image_settings: list[dict[str, Any]]) -> dict[tuple[tuple[str, Any], ...], list[dict[str, Any]]]:

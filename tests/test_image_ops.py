@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from PIL import Image
 
-from src.image_ops import export_cropped_slices, find_white_regions, merge_slices
+from app.image_ops import export_cropped_slices, find_white_regions, merge_slices
 
 
 @pytest.fixture

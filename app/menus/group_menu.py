@@ -4,10 +4,10 @@ import tkinter as tk
 from tkinter import colorchooser, messagebox, simpledialog
 from typing import TYPE_CHECKING
 
-from src.menus.menu import Menu
+from app.menus.menu import Menu
 
 if TYPE_CHECKING:
-    from src.app import App
+    from app.app import App
 
 
 class GroupMenu(Menu):
