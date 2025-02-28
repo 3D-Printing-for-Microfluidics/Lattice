@@ -179,6 +179,7 @@ class FileMenu(Menu):
             messagebox.showerror("Error", msg)
             return
 
+        # Prompt for output filename
         output_path = filedialog.asksaveasfilename(
             title="Save print file",
             defaultextension=".zip",
@@ -187,10 +188,17 @@ class FileMenu(Menu):
         if not output_path:
             return
 
+        # Ask user if they want to run exposure optimization
+        opt_msg = (
+            "Run exposure optimization?\n\n"
+            "This will combine non-overlapping images with similar settings to reduce print time."
+        )
+        optimize = messagebox.askyesno("Exposure Optimization", opt_msg)
+
         popup = Popup(self.app.root, message="Generating print file...")
         try:
             data = self.get_layout_data().get("components", [])
-            new_print_file(Path(self.app.component_file), Path(output_path), data)
+            new_print_file(Path(self.app.component_file), Path(output_path), data, optimize=optimize)
             messagebox.showinfo("Success", f"Print file saved to:\n{output_path}")
         except Exception as e:
             messagebox.showerror("Error", str(e))
