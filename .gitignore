@@ -1,6 +1,14 @@
 test_files/
-
 *.json
+
+# Regenerable LaTeX compilation byproducts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.synctex.gz
+*.pdf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
