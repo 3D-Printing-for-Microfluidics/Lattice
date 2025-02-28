@@ -5,8 +5,8 @@ from tkinter import filedialog, messagebox
 
 from PIL import ImageTk
 
-from image_ops import export_cropped_slices, find_white_regions, merge_slices
-from popup import Popup
+from app.image_ops import export_cropped_slices, find_white_regions, merge_slices
+from app.popup import Popup
 
 
 class ComponentSelector:

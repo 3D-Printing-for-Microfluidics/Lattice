@@ -5,6 +5,7 @@ from tkinter import messagebox, simpledialog
 from typing import TYPE_CHECKING
 
 from app.component import Component
+from app.component_selector import ComponentSelector
 from app.menus.menu import Menu
 from app.tile_dialog import TileDialog
 
@@ -90,6 +91,4 @@ class ComponentMenu(Menu):
 
     def run_cutout_tool(self) -> None:
         """Launch the component cutout tool."""
-        import component_selector
-
-        component_selector.ComponentSelector(parent=self.app.root)
+        ComponentSelector(parent=self.app.root)
