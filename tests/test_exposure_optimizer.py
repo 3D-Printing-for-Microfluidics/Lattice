@@ -11,7 +11,7 @@ from PIL import Image, ImageChops
 
 from app.constants import CANVAS_HEIGHT, CANVAS_WIDTH
 from app.exposure_optimizer import (
-    check_group_overlaps,
+    check_overlap,
     group_by_settings,
     optimize_layer,
     optimize_print_file,
@@ -109,14 +109,14 @@ def test_group_by_settings_identical_settings() -> None:
 
 def test_check_group_overlaps_empty_list() -> None:
     """Test overlap detection with empty list."""
-    assert not check_group_overlaps([])
+    assert not check_overlap([])
 
 
 def test_check_group_overlaps_single_image() -> None:
     """Test overlap detection with single image."""
     img = Image.new("L", (CANVAS_WIDTH, CANVAS_HEIGHT), color=0)
     img.paste(255, (0, 0, 100, 100))
-    assert not check_group_overlaps([img])
+    assert not check_overlap([img])
 
 
 def test_check_group_overlaps_empty_images(empty_image: Image.Image) -> None:
@@ -128,7 +128,7 @@ def test_check_group_overlaps_empty_images(empty_image: Image.Image) -> None:
         Fixture providing an empty test image.
 
     """
-    assert not check_group_overlaps([empty_image, empty_image])
+    assert not check_overlap([empty_image, empty_image])
 
 
 def test_check_group_overlaps_touching_edges(empty_image: Image.Image) -> None:
@@ -147,7 +147,7 @@ def test_check_group_overlaps_touching_edges(empty_image: Image.Image) -> None:
     img1.paste(255, (0, 0, 100, 100))
     img2.paste(255, (100, 100, 200, 200))
 
-    assert not check_group_overlaps([img1, img2])
+    assert not check_overlap([img1, img2])
 
 
 def test_optimize_layer_empty_list() -> None:
