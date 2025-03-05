@@ -10,6 +10,23 @@ from PIL import Image
 from app.component_selector import ComponentSelector
 
 
+@pytest.fixture(autouse=True)
+def mock_tkinter_dialogs():
+    """Mock all tkinter dialogs to prevent them from appearing during tests."""
+    with (
+        patch("tkinter.messagebox.showinfo"),
+        patch("tkinter.messagebox.showerror"),
+        patch("tkinter.messagebox.showwarning"),
+        patch("tkinter.messagebox.askyesno"),
+        patch("tkinter.filedialog.askopenfilename"),
+        patch("tkinter.filedialog.asksaveasfilename"),
+        patch("tkinter.simpledialog.askstring"),
+        patch("tkinter.colorchooser.askcolor"),
+        patch("tkinter.Toplevel"),
+    ):
+        yield
+
+
 @pytest.fixture
 def mock_tk() -> Generator[MagicMock, None, None]:
     """Mock tkinter components."""
@@ -263,3 +280,214 @@ def test_export_cropped_images_cancel(component_selector: ComponentSelector, moc
 
         # Check that export was not called
         mock_image_ops["export_cropped_slices"].assert_not_called()
+
+
+def test_update_selection_box_no_selection(component_selector: ComponentSelector) -> None:
+    """Test update_selection_box with no selection."""
+    component_selector.selected_bbox = None
+    component_selector.update_selection_box()
+    # Should not create a rectangle if no selection
+    component_selector.preview_canvas.create_rectangle.assert_not_called()
+
+
+def test_update_selection_box_with_selection(component_selector: ComponentSelector) -> None:
+    """Test update_selection_box with a selection."""
+    # Set up a selected region
+    component_selector.selected_bbox = (100, 100, 200, 200)
+    component_selector.zoom_factor = 0.5
+    component_selector.highlight_rect = None
+
+    # Mock the canvas create_rectangle method
+    component_selector.preview_canvas.create_rectangle.return_value = 123  # Rectangle ID
+
+    # Call the method
+    component_selector.update_selection_box()
+
+    # Check that create_rectangle was called with scaled coordinates
+    component_selector.preview_canvas.create_rectangle.assert_called_once()
+    args = component_selector.preview_canvas.create_rectangle.call_args[0]
+    assert args == (50, 50, 101, 101)  # Scaled by 0.5
+
+    # Check that highlight_rect was set
+    assert component_selector.highlight_rect == 123
+
+
+def test_update_selection_box_existing_highlight(component_selector: ComponentSelector) -> None:
+    """Test update_selection_box with existing highlight rectangle."""
+    # Set up a selected region and existing highlight
+    component_selector.selected_bbox = (100, 100, 200, 200)
+    component_selector.zoom_factor = 0.5
+    component_selector.highlight_rect = 456  # Existing rectangle ID
+
+    # Mock the canvas methods
+    component_selector.preview_canvas.create_rectangle.return_value = 789  # New rectangle ID
+
+    # Call the method
+    component_selector.update_selection_box()
+
+    # Check that delete was called on the old rectangle
+    component_selector.preview_canvas.delete.assert_called_once_with(456)
+
+    # Check that create_rectangle was called
+    component_selector.preview_canvas.create_rectangle.assert_called_once()
+
+    # Check that highlight_rect was updated
+    assert component_selector.highlight_rect == 789
+
+
+def test_redraw_image() -> None:
+    """Test redraw_image method."""
+    # Create a mock image with resize method
+    mock_image = MagicMock()
+    mock_image.width = 800
+    mock_image.height = 600
+
+    # Create a resized image mock
+    resized_img = MagicMock()
+    mock_image.resize = MagicMock(return_value=resized_img)
+
+    # Create a mock component selector
+    selector = MagicMock(spec=ComponentSelector)
+    selector.original_img = mock_image
+    selector.zoom_factor = 0.5
+    selector.preview_canvas = MagicMock()
+    selector.preview_canvas_img = MagicMock()
+
+    # Get the actual method from the class
+    redraw_method = ComponentSelector.redraw_image
+
+    # Call the method with our mock
+    with patch("PIL.ImageTk.PhotoImage", return_value="new_image"):
+        redraw_method(selector)
+
+    # Check that resize was called with correct dimensions
+    mock_image.resize.assert_called_once_with((400, 300))  # 800*0.5, 600*0.5
+
+    # Check that the canvas was updated
+    selector.preview_canvas.itemconfig.assert_called_once_with(selector.preview_canvas_img, image="new_image")
+
+    # Check that the scrollregion was updated
+    selector.preview_canvas.config.assert_called_once_with(scrollregion=(0, 0, 400, 300))
+
+    # Check that update_selection_box was called
+    selector.update_selection_box.assert_called_once()
+
+
+def test_create_widgets(component_selector: ComponentSelector) -> None:
+    """Test _create_widgets method."""
+    # Create mocks for all the tkinter components
+    with (
+        patch("tkinter.Label", return_value=MagicMock()),
+        patch("tkinter.Frame", return_value=MagicMock()),
+        patch("tkinter.Button", return_value=MagicMock()),
+        patch("tkinter.Scrollbar", return_value=MagicMock()),
+        patch("tkinter.Canvas", return_value=MagicMock()),
+        patch("PIL.ImageTk.PhotoImage", return_value=MagicMock()),
+    ):
+        # Set up the original_img with proper attributes
+        component_selector.original_img = MagicMock()
+        component_selector.original_img.width = 800
+        component_selector.original_img.height = 600
+
+        # Create scrollbars before calling _create_widgets
+        component_selector.scroll_x = MagicMock()
+        component_selector.scroll_y = MagicMock()
+
+        # Call the method
+        component_selector._create_widgets()  # noqa: SLF001
+
+        # Check that canvas was created with correct dimensions
+        tk.Canvas.assert_called_once()
+        canvas_args = tk.Canvas.call_args[1]
+        assert "width" in canvas_args
+        assert "height" in canvas_args
+
+        # Check that scrollbars were configured - don't check exact call count
+        assert component_selector.scroll_x.config.called
+        assert component_selector.scroll_y.config.called
+
+
+def test_init_with_parent() -> None:
+    """Test initialization with a parent widget."""
+    mock_parent = MagicMock(spec=tk.Widget)
+    mock_root = MagicMock()
+    mock_root.mainloop = MagicMock()  # Explicitly mock mainloop
+
+    with (
+        patch("tkinter.Toplevel", return_value=mock_root) as mock_toplevel,
+        patch("tkinter.filedialog.askopenfilename", return_value=""),
+        patch.object(ComponentSelector, "_get_input_zip", return_value=""),
+        patch.object(ComponentSelector, "_create_widgets"),
+        patch.object(ComponentSelector, "redraw_image"),
+    ):
+        # Create instance with parent
+        ComponentSelector(parent=mock_parent)
+
+        # Check that Toplevel was created with parent
+        mock_toplevel.assert_called_once_with(mock_parent)
+
+        # Check that root was destroyed when no input zip
+        mock_root.destroy.assert_called_once()
+
+
+def test_init_without_parent() -> None:
+    """Test initialization without a parent widget."""
+    mock_root = MagicMock()
+    mock_root.mainloop = MagicMock()  # Explicitly mock mainloop
+
+    with (
+        patch("tkinter.Tk", return_value=mock_root) as mock_tk,
+        patch("tkinter.filedialog.askopenfilename", return_value=""),
+        patch.object(ComponentSelector, "_get_input_zip", return_value=""),
+        patch.object(ComponentSelector, "_create_widgets"),
+        patch.object(ComponentSelector, "redraw_image"),
+    ):
+        # Create instance without parent
+        ComponentSelector()
+
+        # Check that Tk was created
+        mock_tk.assert_called_once()
+
+        # Check that root was destroyed when no input zip
+        mock_root.destroy.assert_called_once()
+
+
+def test_init_with_valid_input() -> None:
+    """Test initialization with valid input zip."""
+    # Mock the root window
+    mock_root = MagicMock()
+    mock_root.mainloop = MagicMock()  # Explicitly mock mainloop
+    mock_root.winfo_screenwidth.return_value = 1920
+    mock_root.winfo_screenheight.return_value = 1080
+
+    # Create a mock image
+    mock_image = MagicMock()
+    mock_image.width = 800
+    mock_image.height = 600
+
+    # Define regions to be returned by find_white_regions
+    regions = [(100, 100, 200, 200)]
+
+    # We'll completely bypass the actual merge_slices implementation
+    with (
+        patch("tkinter.Tk", return_value=mock_root),
+        patch.object(ComponentSelector, "_get_input_zip", return_value="test.zip"),
+        patch("app.popup.Popup"),
+        # Skip the actual merge_slices implementation by patching it directly
+        patch("app.component_selector.merge_slices", return_value=mock_image),
+        patch("app.component_selector.find_white_regions", return_value=regions),
+        patch.object(ComponentSelector, "_create_widgets"),
+        patch.object(ComponentSelector, "redraw_image"),
+        patch("PIL.ImageTk.PhotoImage"),
+    ):
+        # Create instance with valid input
+        selector = ComponentSelector()
+
+        # Check that the instance was initialized with the correct attributes
+        assert selector.input_zip == "test.zip"
+        assert selector.original_img == mock_image
+        assert selector.regions_data == regions
+        assert selector.selected_bbox is None
+
+        # Check that mainloop was called
+        mock_root.mainloop.assert_called_once()
