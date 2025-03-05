@@ -2,6 +2,7 @@
 
 import json
 import tkinter as tk
+import traceback
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
@@ -201,6 +202,9 @@ class FileMenu(Menu):
             new_print_file(Path(self.app.component_file), Path(output_path), data, optimize=optimize)
             messagebox.showinfo("Success", f"Print file saved to:\n{output_path}")
         except Exception as e:
-            messagebox.showerror("Error", str(e))
+            msg = f"Error generating print file: {e}"
+            print(msg)
+            traceback.print_exc()
+            messagebox.showerror("Error", msg)
         finally:
             popup.destroy()

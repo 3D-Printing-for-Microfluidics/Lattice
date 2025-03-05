@@ -1,3 +1,3 @@
-"""Multiplexed device dose customization package."""
+"""3D Print Dose Customization package."""
 
 __version__ = "0.1.0"
