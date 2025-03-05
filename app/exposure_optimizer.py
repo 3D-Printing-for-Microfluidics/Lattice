@@ -1,21 +1,17 @@
 """Optimize print time by combining non-overlapping images with similar settings."""
 
-from __future__ import annotations  # For Python 3.7-3.9 compatibility
-
 import copy
-import io
-import json
-import zipfile
 from pathlib import Path
 from typing import Any
 
 from PIL import Image, ImageChops
 
 from app.constants import CANVAS_HEIGHT, CANVAS_WIDTH
+from app.print_file_utils import load_print_file, save_print_file
 
 
 def group_by_settings(image_settings: list[dict[str, Any]]) -> dict[tuple[tuple[str, Any], ...], list[dict[str, Any]]]:
-    """Group images by all parameters except name and exposure time.
+    """Group images where all image settings are the same except name and exposure time.
 
     Parameters
     ----------
@@ -41,8 +37,8 @@ def group_by_settings(image_settings: list[dict[str, Any]]) -> dict[tuple[tuple[
     return groups
 
 
-def check_group_overlaps(images: list[Image.Image]) -> bool:
-    """Detect if any images in the group have overlapping non-zero pixels.
+def check_overlap(images: list[Image.Image]) -> bool:
+    """Detect if any images in the list have overlapping non-zero pixels.
 
     Uses a fast approach by first checking bounding boxes, then only checking pixel
     overlap for images with overlapping bounding boxes.
@@ -96,11 +92,11 @@ def check_group_overlaps(images: list[Image.Image]) -> bool:
     return False
 
 
-def create_optimized_exposures(
+def combine_exposures(
     group: list[dict[str, Any]],
     group_images: list[Image.Image],
 ) -> tuple[list[dict[str, Any]], dict[str, Image.Image]]:
-    """Create optimized exposure settings and composite images.
+    """Create optimized exposure settings and composite images by combining exposures.
 
     This helper function creates composite images for each unique exposure time
     and returns new settings and images.
@@ -108,7 +104,7 @@ def create_optimized_exposures(
     Parameters
     ----------
     group : list[dict[str, Any]]
-        Group of image settings with the same parameters (except exposure time)
+        Group of image settings with the same parameters
     group_images : list[Image.Image]
         List of images corresponding to the settings in the group
     images : dict[str, Image.Image]
@@ -147,6 +143,7 @@ def create_optimized_exposures(
         settings = copy.deepcopy(group[i])
         new_img_name = f"{Path(settings['Image file']).stem}_opt_{i}.png"
         new_setting = {**settings, "Image file": new_img_name, "Layer exposure time (ms)": exposure_diff}
+
         new_images[new_img_name] = composite
         new_settings.append(new_setting)
 
@@ -178,28 +175,28 @@ def optimize_layer(layer_dict: dict[str, Any]) -> dict[str, Any]:
         return layer_dict
 
     # Group images by their settings (except name and exposure time)
-    image_groups = group_by_settings(image_settings)
+    settings_groups = group_by_settings(image_settings)
     new_settings = []
     new_images = images.copy()
 
     # Process each group of images with the same settings
-    for group in image_groups.values():
+    for group_settings in settings_groups.values():
         # Skip groups with only one image (no optimization needed)
-        if len(group) <= 1:
-            new_settings.extend(group)
+        if len(group_settings) <= 1:
+            new_settings.extend(group_settings)
             continue
 
         # Sort by exposure time to process in order
-        group.sort(key=lambda x: x["Layer exposure time (ms)"])
-        group_images = [images[s["Image file"]] for s in group]
+        group_settings.sort(key=lambda x: x["Layer exposure time (ms)"])
+        group_images = [images[s["Image file"]] for s in group_settings]
 
         # Skip groups with overlapping images (can't be combined)
-        if check_group_overlaps(group_images):
-            new_settings.extend(group)
+        if check_overlap(group_images):
+            new_settings.extend(group_settings)
             continue
 
         # Create optimized exposures by combining images
-        optimized_settings, optimized_images = create_optimized_exposures(group, group_images)
+        optimized_settings, optimized_images = combine_exposures(group_settings, group_images)
         new_settings.extend(optimized_settings)
         new_images.update(optimized_images)
 
@@ -268,7 +265,6 @@ def optimize_print_file(input_path: Path, output_path: Path | None = None) -> No
         Path to input zip file containing print settings and images.
     output_path : Path | None, optional
         Path to output zip file. If None, uses input name + '_optimized.zip'.
-
     """
     if output_path is None:
         output_path = input_path.parent / f"{input_path.stem}_optimized.zip"
@@ -282,73 +278,6 @@ def optimize_print_file(input_path: Path, output_path: Path | None = None) -> No
     print(f"Saving optimized files to {output_path}...")
     save_print_file(output_path, optimized_settings, all_images)
     print(f"Optimization complete! Files saved to {output_path}")
-
-
-def load_print_file(input_path: Path) -> tuple[dict[str, Any], dict[str, Image.Image]]:
-    """Load print settings and images from a zip file.
-
-    Parameters
-    ----------
-    input_path : Path
-        Path to input zip file containing print settings and images.
-
-    Returns
-    -------
-    tuple[dict[str, Any], dict[str, Image.Image]]
-        Tuple containing:
-        - Dictionary with print settings
-        - Dictionary mapping filenames to PIL Image objects
-
-    """
-    images: dict[str, Image.Image] = {}
-    with zipfile.ZipFile(input_path, "r") as zf:
-        with zf.open("print_settings.json") as f:
-            print_settings = json.load(f)
-
-        unique_images = set()
-        for layer in print_settings.get("Layers", []):
-            for img_setting in layer.get("Image settings list", []):
-                unique_images.add(img_setting["Image file"])
-
-        print(f"Loading {len(unique_images)} images...")
-        for img_name in unique_images:
-            with zf.open(f"slices/{img_name}") as f:
-                images[img_name] = Image.open(f).convert("L")
-
-    return print_settings, images
-
-
-def save_print_file(output_path: Path, optimized_settings: dict[str, Any], all_images: dict[str, Image.Image]) -> None:
-    """Save optimized print settings and images to a zip file.
-
-    Parameters
-    ----------
-    output_path : Path
-        Path to output zip file.
-    optimized_settings : dict[str, Any]
-        Dictionary containing optimized print settings.
-    all_images : dict[str, Image.Image]
-        Dictionary mapping filenames to PIL Image objects.
-    """
-    print(f"Saving optimized files to {output_path}...")
-    with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
-        # Save settings
-        zf.writestr("print_settings.json", json.dumps(optimized_settings, indent=2))
-
-        # Save only referenced images
-        saved_count = 0
-        seen = set()
-        for layer in optimized_settings.get("Layers", []):
-            for img_setting in layer.get("Image settings list", []):
-                img_name = img_setting["Image file"]
-                if img_name not in seen:
-                    img_bytes = io.BytesIO()
-                    all_images[img_name].save(img_bytes, format="PNG")
-                    zf.writestr(f"slices/{img_name}", img_bytes.getvalue())
-                    seen.add(img_name)
-                    saved_count += 1
-
-        print(f"Saved {saved_count} images")
 
 
 if __name__ == "__main__":
