@@ -49,6 +49,7 @@ class FileMenu(Menu):
             width, height = get_component_dimensions(file_path)
         except Exception as exc:
             messagebox.showerror("Error", f"Failed to load component: {exc}")
+            return
         self.app.comp_width = width
         self.app.comp_height = height
         self.app.component_file = file_path
