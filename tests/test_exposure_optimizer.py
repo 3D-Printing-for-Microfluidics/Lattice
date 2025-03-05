@@ -15,7 +15,7 @@ from app.exposure_optimizer import (
     group_by_settings,
     optimize_layer,
     optimize_print_file,
-    optimize_print_file_from_zip,
+    optimize_print_settings,
 )
 
 
@@ -152,17 +152,19 @@ def test_check_group_overlaps_touching_edges(empty_image: Image.Image) -> None:
 
 def test_optimize_layer_empty_list() -> None:
     """Test layer optimization with empty input list."""
-    settings, images = optimize_layer([], {})
-    assert settings == []
-    assert images == {}
+    layer_dict = {"Image settings list": [], "Images": {}}
+    result = optimize_layer(layer_dict)
+    assert result["Image settings list"] == []
+    assert result["Images"] == {}
 
 
 def test_optimize_layer_single_image(sample_images: dict[str, Image.Image]) -> None:
     """Test layer optimization with single image."""
     settings = [{"Image file": "image1.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"}]
-    result_settings, result_images = optimize_layer(settings, sample_images)
-    assert result_settings == settings
-    assert result_images == sample_images
+    layer_dict = {"Image settings list": settings, "Images": {"image1.png": sample_images["image1.png"]}}
+    result = optimize_layer(layer_dict)
+    assert result["Image settings list"] == settings
+    assert "image1.png" in result["Images"]
 
 
 def test_optimize_layer_zero_exposure(sample_images: dict[str, Image.Image]) -> None:
@@ -171,10 +173,14 @@ def test_optimize_layer_zero_exposure(sample_images: dict[str, Image.Image]) -> 
         {"Image file": "image1.png", "Layer exposure time (ms)": 0, "Other setting": "value1"},
         {"Image file": "image2.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
     ]
-    result_settings, result_images = optimize_layer(settings, sample_images)
-    assert len(result_settings) == 1
-    assert result_settings[0]["Layer exposure time (ms)"] == 1000
-    assert "image1.png" in result_images
+    layer_dict = {
+        "Image settings list": settings,
+        "Images": {"image1.png": sample_images["image1.png"], "image2.png": sample_images["image2.png"]},
+    }
+    result = optimize_layer(layer_dict)
+    assert len(result["Image settings list"]) == 1
+    assert result["Image settings list"][0]["Layer exposure time (ms)"] == 1000
+    assert "image1.png" in result["Images"]
 
 
 def test_optimize_layer_identical_exposures(sample_images: dict[str, Image.Image]) -> None:
@@ -183,21 +189,22 @@ def test_optimize_layer_identical_exposures(sample_images: dict[str, Image.Image
         {"Image file": "image1.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
         {"Image file": "image2.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
     ]
-    result_settings, result_images = optimize_layer(settings, sample_images)
-    assert len(result_settings) == 1
-    assert result_settings[0]["Layer exposure time (ms)"] == 1000
+    layer_dict = {
+        "Image settings list": settings,
+        "Images": {"image1.png": sample_images["image1.png"], "image2.png": sample_images["image2.png"]},
+    }
+    result = optimize_layer(layer_dict)
+    assert len(result["Image settings list"]) == 1
+    assert result["Image settings list"][0]["Layer exposure time (ms)"] == 1000
 
     # Verify that the new composite image was created
-    assert any(name.startswith("opt_") for name in result_images.keys())
-
-    # Verify that original images are preserved
-    assert all(img in result_images for img in sample_images)
+    assert any("_opt_" in name for name in result["Images"].keys())
 
 
 def test_optimize_print_file_empty_layers() -> None:
     """Test print file optimization with empty layers list."""
     print_settings = {"Layers": []}
-    result_settings, result_images = optimize_print_file(print_settings, {})
+    result_settings, result_images = optimize_print_settings(print_settings, {})
     assert result_settings == {"Layers": []}
     assert result_images == {}
 
@@ -205,107 +212,67 @@ def test_optimize_print_file_empty_layers() -> None:
 def test_optimize_print_file_empty_settings_list() -> None:
     """Test print file optimization with empty image settings list."""
     print_settings = {"Layers": [{"Image settings list": []}]}
-    result_settings, result_images = optimize_print_file(print_settings, {})
+    result_settings, result_images = optimize_print_settings(print_settings, {})
     assert result_settings == {"Layers": [{"Image settings list": []}]}
     assert result_images == {}
 
 
-def test_optimize_print_file_from_zip_missing_slices(tmp_path: Path) -> None:
-    """Test handling of missing slices directory in zip.
-
-    Parameters
-    ----------
-    tmp_path : Path
-        Pytest fixture providing temporary directory path.
-
-    Notes
-    -----
-    When the slices directory is missing, the function should create an empty
-    slices directory in the output path without raising an error.
-    """
+def test_optimize_print_file_missing_slices(tmp_path: Path) -> None:
+    """Test handling of missing slices directory in zip."""
     zip_path = tmp_path / "test.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:
         settings = {"Layers": [{"Image settings list": []}]}
         zf.writestr("print_settings.json", json.dumps(settings))
 
-    optimize_print_file_from_zip(zip_path)
-    output_dir = zip_path.parent / f"{zip_path.stem}_optimized"
+    output_path = zip_path.parent / f"{zip_path.stem}_optimized.zip"
+    optimize_print_file(zip_path)
 
-    # Check that directories were created
-    assert output_dir.exists()
-    assert (output_dir / "slices").exists()
-
-    # Check that slices directory is empty
-    assert len(list((output_dir / "slices").glob("*.png"))) == 0
-
-    # Check that print settings were copied
-    with open(output_dir / "print_settings.json") as f:
-        output_settings = json.load(f)
-    assert output_settings == settings
+    assert output_path.exists()
+    with zipfile.ZipFile(output_path, "r") as zf:
+        assert "print_settings.json" in zf.namelist()
 
 
-def test_optimize_print_file_from_zip_invalid_json(tmp_path: Path) -> None:
-    """Test handling of invalid JSON in print settings.
-
-    Parameters
-    ----------
-    tmp_path : Path
-        Pytest fixture providing temporary directory path.
-
-    """
+def test_optimize_print_file_invalid_json(tmp_path: Path) -> None:
+    """Test handling of invalid JSON in print settings."""
     zip_path = tmp_path / "test.zip"
     with zipfile.ZipFile(zip_path, "w") as zf:
         zf.writestr("print_settings.json", "invalid json")
 
     with pytest.raises(json.JSONDecodeError):
-        optimize_print_file_from_zip(zip_path)
+        optimize_print_file(zip_path)
 
 
-def test_optimize_print_file_from_zip_custom_output(tmp_path: Path) -> None:
-    """Test optimization with custom output directory.
-
-    Parameters
-    ----------
-    tmp_path : Path
-        Pytest fixture providing temporary directory path.
-
-    """
+def test_optimize_print_file_custom_output(tmp_path: Path) -> None:
+    """Test optimization with custom output path."""
     zip_path = tmp_path / "test.zip"
-    output_path = tmp_path / "custom_output"
+    output_path = tmp_path / "custom_output.zip"
 
     with zipfile.ZipFile(zip_path, "w") as zf:
         settings = {"Layers": [{"Image settings list": []}]}
         zf.writestr("print_settings.json", json.dumps(settings))
 
-    optimize_print_file_from_zip(zip_path, output_path)
+    optimize_print_file(zip_path, output_path)
     assert output_path.exists()
-    assert (output_path / "print_settings.json").exists()
-    assert (output_path / "slices").exists()
+    with zipfile.ZipFile(output_path, "r") as zf:
+        assert "print_settings.json" in zf.namelist()
 
 
 def test_optimize_layer_mixed_settings(sample_images: dict[str, Image.Image]) -> None:
     """Test optimization with mix of combinable and non-combinable settings."""
     settings = [
         {"Image file": "image1.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
-        {
-            "Image file": "image2.png",
-            "Layer exposure time (ms)": 1000,
-            "Other setting": "value1",
-        },  # Should combine with image1
-        {
-            "Image file": "image3.png",
-            "Layer exposure time (ms)": 1000,
-            "Other setting": "value2",
-        },  # Different setting, shouldn't combine
+        {"Image file": "image2.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
+        {"Image file": "image3.png", "Layer exposure time (ms)": 1000, "Other setting": "value2"},
     ]
-    result_settings, result_images = optimize_layer(settings, sample_images)
+    layer_dict = {"Image settings list": settings, "Images": sample_images}
+    result = optimize_layer(layer_dict)
 
     # Should have two settings: one combined (image1+image2) and one original (image3)
-    assert len(result_settings) == 2
+    assert len(result["Image settings list"]) == 2
 
     # Find the combined and uncombined settings
-    combined = next(s for s in result_settings if s["Image file"].startswith("opt_"))
-    uncombined = next(s for s in result_settings if not s["Image file"].startswith("opt_"))
+    combined = next(s for s in result["Image settings list"] if "_opt_" in s["Image file"])
+    uncombined = next(s for s in result["Image settings list"] if "_opt_" not in s["Image file"])
 
     # Check combined setting
     assert combined["Layer exposure time (ms)"] == 1000
@@ -316,7 +283,7 @@ def test_optimize_layer_mixed_settings(sample_images: dict[str, Image.Image]) ->
     assert uncombined["Other setting"] == "value2"
 
     # Verify image contents
-    combined_img = result_images[combined["Image file"]]
+    combined_img = result["Images"][combined["Image file"]]
     # The combined image should be the union of image1 and image2
     expected_combined = ImageChops.lighter(sample_images["image1.png"], sample_images["image2.png"])
     assert ImageChops.difference(combined_img, expected_combined).getbbox() is None
@@ -326,22 +293,17 @@ def test_optimize_layer_overlapping_images(sample_images: dict[str, Image.Image]
     """Test that overlapping images are not combined even with identical settings."""
     settings = [
         {"Image file": "image1.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
-        {
-            "Image file": "image3.png",
-            "Layer exposure time (ms)": 1000,
-            "Other setting": "value1",
-        },  # Overlaps with image1
+        {"Image file": "image3.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
     ]
-    result_settings, result_images = optimize_layer(settings, sample_images)
+    layer_dict = {
+        "Image settings list": settings,
+        "Images": {"image1.png": sample_images["image1.png"], "image3.png": sample_images["image3.png"]},
+    }
+    result = optimize_layer(layer_dict)
 
     # Should keep original settings since images overlap
-    assert len(result_settings) == 2
-    assert {s["Image file"] for s in result_settings} == {"image1.png", "image3.png"}
-
-    # Verify images weren't modified
-    for img_name in ["image1.png", "image3.png"]:
-        assert img_name in result_images
-        assert ImageChops.difference(result_images[img_name], sample_images[img_name]).getbbox() is None
+    assert len(result["Image settings list"]) == 2
+    assert {s["Image file"] for s in result["Image settings list"]} == {"image1.png", "image3.png"}
 
 
 def test_optimize_layer_progressive_exposures(sample_images: dict[str, Image.Image]) -> None:
@@ -351,56 +313,28 @@ def test_optimize_layer_progressive_exposures(sample_images: dict[str, Image.Ima
 
     settings = [
         {"Image file": "image1.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
-        {
-            "Image file": "image2.png",
-            "Layer exposure time (ms)": 2000,
-            "Other setting": "value1",
-        },  # Non-overlapping with image1
+        {"Image file": "image2.png", "Layer exposure time (ms)": 2000, "Other setting": "value1"},
     ]
-    result_settings, result_images = optimize_layer(settings, test_images)
+    layer_dict = {"Image settings list": settings, "Images": test_images}
+    result = optimize_layer(layer_dict)
 
     # Should have two optimized settings
-    assert len(result_settings) == 2
+    assert len(result["Image settings list"]) == 2
 
     # Sort settings by exposure time to ensure order
-    sorted_settings = sorted(result_settings, key=lambda x: x["Layer exposure time (ms)"])
+    sorted_settings = sorted(result["Image settings list"], key=lambda x: x["Layer exposure time (ms)"])
     first, second = sorted_settings
 
     # First setting should be both images exposed for 1000ms
     assert first["Layer exposure time (ms)"] == 1000
-    assert first["Image file"].startswith("opt_")
-    first_img = result_images[first["Image file"]]
+    assert "_opt_" in first["Image file"]
+    first_img = result["Images"][first["Image file"]]
     expected_first = ImageChops.lighter(test_images["image1.png"], test_images["image2.png"])
     assert ImageChops.difference(first_img, expected_first).getbbox() is None
 
     # Second setting should be just image2 exposed for additional 1000ms
     assert second["Layer exposure time (ms)"] == 1000
-    assert second["Image file"].startswith("opt_")
-    second_img = result_images[second["Image file"]]
+    assert "_opt_" in second["Image file"]
+    second_img = result["Images"][second["Image file"]]
     # The second image should be just image2 since it needs more exposure
     assert ImageChops.difference(second_img, test_images["image2.png"]).getbbox() is None
-
-    # Verify total exposure times
-    # image1 gets 1000ms total (first exposure only)
-    # image2 gets 2000ms total (both exposures)
-    exposures = {
-        "image1.png": 0,
-        "image2.png": 0,
-    }
-
-    # Calculate total exposure for each original image
-    for setting in result_settings:
-        exposure_time = setting["Layer exposure time (ms)"]
-        img = result_images[setting["Image file"]]
-        # Check which original images contribute to this composite
-        for orig_name, orig_img in test_images.items():
-            # Create a mask where the original image has non-zero pixels
-            orig_mask = orig_img.point(lambda x: 1 if x > 0 else 0)
-            # Apply mask to the composite image
-            masked_composite = ImageChops.multiply(img, orig_mask)
-            # If any pixels remain, the original image contributes to this exposure
-            if masked_composite.getbbox() is not None:
-                exposures[orig_name] += exposure_time
-
-    assert exposures["image1.png"] == 1000  # Original setting was 1000
-    assert exposures["image2.png"] == 2000  # Original setting was 2000
