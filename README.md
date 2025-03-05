@@ -2,6 +2,8 @@
 
 A graphical tool for arranging and customizing components for 3D printing with different exposure settings.
 
+Run with `python -m app.app`
+
 ## Features
 
 - **Component Management**
