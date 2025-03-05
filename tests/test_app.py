@@ -33,10 +33,10 @@ def app() -> App:
         mock_canvas.tag_bind = MagicMock()
 
         # Track canvas dimensions for zoom tests
-        mock_canvas._width = CANVAS_WIDTH
-        mock_canvas._height = CANVAS_HEIGHT
-        mock_canvas.winfo_width = MagicMock(side_effect=lambda: mock_canvas._width)
-        mock_canvas.winfo_height = MagicMock(side_effect=lambda: mock_canvas._height)
+        mock_canvas._width = CANVAS_WIDTH  # noqa: SLF001
+        mock_canvas._height = CANVAS_HEIGHT  # noqa: SLF001
+        mock_canvas.winfo_width = MagicMock(side_effect=lambda: mock_canvas._width)  # noqa: SLF001
+        mock_canvas.winfo_height = MagicMock(side_effect=lambda: mock_canvas._height)  # noqa: SLF001
 
         # Mock Label
         mock_label = MagicMock()
@@ -60,9 +60,9 @@ def app() -> App:
             app.comp_width = 100
             app.comp_height = 100
             # Store mocks for test access
-            app._mock_canvas = mock_canvas
-            app._mock_label = mock_label
-            app._expected_text = expected_text
+            app._mock_canvas = mock_canvas  # noqa: SLF001
+            app._mock_label = mock_label  # noqa: SLF001
+            app._expected_text = expected_text  # noqa: SLF001
             return app
 
 
@@ -125,8 +125,8 @@ def test_canvas_zoom(app: App) -> None:
     assert app.zoom_factor == 1.1
 
     # Update mock canvas dimensions
-    app._mock_canvas._width = int(CANVAS_WIDTH * 1.1)
-    app._mock_canvas._height = int(CANVAS_HEIGHT * 1.1)
+    app._mock_canvas._width = int(CANVAS_WIDTH * 1.1)  # noqa: SLF001
+    app._mock_canvas._height = int(CANVAS_HEIGHT * 1.1)  # noqa: SLF001
 
     assert app.canvas.winfo_width() == int(CANVAS_WIDTH * 1.1)
     assert app.canvas.winfo_height() == int(CANVAS_HEIGHT * 1.1)
@@ -136,8 +136,8 @@ def test_canvas_zoom(app: App) -> None:
     assert app.zoom_factor == 1.0
 
     # Update mock canvas dimensions
-    app._mock_canvas._width = CANVAS_WIDTH
-    app._mock_canvas._height = CANVAS_HEIGHT
+    app._mock_canvas._width = CANVAS_WIDTH  # noqa: SLF001
+    app._mock_canvas._height = CANVAS_HEIGHT  # noqa: SLF001
 
     assert app.canvas.winfo_width() == CANVAS_WIDTH
     assert app.canvas.winfo_height() == CANVAS_HEIGHT
@@ -181,7 +181,7 @@ def test_select_components_in_area(app: App) -> None:
     app.groups["1.0"].append(comp2)
 
     # Mock the component selection
-    def mock_select():
+    def mock_select() -> None:
         if comp1 not in app.selection:
             app.selection.append(comp1)
 
