@@ -87,7 +87,8 @@ def new_print_file(input_path: Path, output_path: Path, layout_data: list, *, op
 
     """
     exposure_config = create_exposure_config(layout_data)
-    print_settings, images = load_print_file(input_path)
+    print_settings, old_images = load_print_file(input_path)
+    new_images: dict[str, Image.Image] = {}
 
     # Process each layer
     for layer_settings in print_settings.get("Layers", []):
@@ -98,12 +99,12 @@ def new_print_file(input_path: Path, output_path: Path, layout_data: list, *, op
             exp_scale = float(group_name) / 100.0
             for old_setting in old_image_settings:
                 old_name = old_setting["Image file"]
-                old_img = images[old_name]
+                old_img = old_images[old_name]
                 composite_img = gen_group_composite(old_img, group_settings)
 
                 basename, ext = old_name.rsplit(".", 1)
                 new_name = f"{basename}_{group_name}.{ext}"
-                images[new_name] = composite_img
+                new_images[new_name] = composite_img
 
                 new_setting = copy.deepcopy(old_setting)
                 new_setting["Image file"] = new_name
@@ -114,6 +115,6 @@ def new_print_file(input_path: Path, output_path: Path, layout_data: list, *, op
         layer_settings["Image settings list"] = new_image_settings
 
     if optimize:
-        print_settings, images = optimize_print_settings(print_settings, images)
+        print_settings, new_images = optimize_print_settings(print_settings, new_images)
 
-    save_print_file(output_path, print_settings, images)
+    save_print_file(output_path, print_settings, new_images)
