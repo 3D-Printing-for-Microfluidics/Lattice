@@ -1,6 +1,5 @@
 """Test suite for exposure optimizer functions."""
 
-import io
 import json
 import zipfile
 from pathlib import Path
@@ -93,7 +92,7 @@ def test_group_by_settings_single_item() -> None:
     settings = [{"Image file": "test.png", "Layer exposure time (ms)": 1000, "param": "value"}]
     groups = group_by_settings(settings)
     assert len(groups) == 1
-    assert list(groups.values())[0] == settings
+    assert next(iter(groups.values())) == settings
 
 
 def test_group_by_settings_identical_settings() -> None:
@@ -104,7 +103,7 @@ def test_group_by_settings_identical_settings() -> None:
     ]
     groups = group_by_settings(settings)
     assert len(groups) == 1
-    assert len(list(groups.values())[0]) == 2
+    assert len(next(iter(groups.values()))) == 2
 
 
 def test_check_group_overlaps_empty_list() -> None:
@@ -198,7 +197,7 @@ def test_optimize_layer_identical_exposures(sample_images: dict[str, Image.Image
     assert result["Image settings list"][0]["Layer exposure time (ms)"] == 1000
 
     # Verify that the new composite image was created
-    assert any("_opt_" in name for name in result["Images"].keys())
+    assert any("_opt_" in name for name in result["Images"])
 
 
 def test_optimize_print_file_empty_layers() -> None:

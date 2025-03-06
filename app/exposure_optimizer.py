@@ -86,7 +86,9 @@ def check_overlap(images: list[Image.Image]) -> bool:
 
             # Check if any pixels overlap
             overlap = ImageChops.multiply(crop1, crop2)
-            if overlap.getextrema()[0] > 0:
+
+            # If there are any non-zero pixels in the result, there's an overlap
+            if overlap.getbbox() is not None:
                 return True
 
     return False
@@ -107,8 +109,6 @@ def combine_exposures(
         Group of image settings with the same parameters
     group_images : list[Image.Image]
         List of images corresponding to the settings in the group
-    images : dict[str, Image.Image]
-        Dictionary of existing images
 
     Returns
     -------
@@ -129,8 +129,11 @@ def combine_exposures(
         if exposure_diff > 0:
             # Create composite of all images from this index onwards
             composite = Image.new("L", (CANVAS_WIDTH, CANVAS_HEIGHT), color=0)
-            for img in group_images[i:]:
-                composite = ImageChops.lighter(composite, img)
+
+            # Use a copy of each image to avoid modifying the original
+            for j in range(i, len(group_images)):
+                img_copy = group_images[j].copy()
+                composite = ImageChops.lighter(composite, img_copy)
 
             # Only store composite if it contains non-zero pixels
             if composite.getbbox() is not None:
@@ -144,7 +147,8 @@ def combine_exposures(
         new_img_name = f"{Path(settings['Image file']).stem}_opt_{i}.png"
         new_setting = {**settings, "Image file": new_img_name, "Layer exposure time (ms)": exposure_diff}
 
-        new_images[new_img_name] = composite
+        # Store a copy of the composite image to avoid any reference issues
+        new_images[new_img_name] = composite.copy()
         new_settings.append(new_setting)
 
     return new_settings, new_images
@@ -177,7 +181,7 @@ def optimize_layer(layer_dict: dict[str, Any]) -> dict[str, Any]:
     # Group images by their settings (except name and exposure time)
     settings_groups = group_by_settings(image_settings)
     new_settings = []
-    new_images = images.copy()
+    new_images = copy.deepcopy(images)  # Use deep copy to avoid modifying original images
 
     # Process each group of images with the same settings
     for group_settings in settings_groups.values():
@@ -188,7 +192,9 @@ def optimize_layer(layer_dict: dict[str, Any]) -> dict[str, Any]:
 
         # Sort by exposure time to process in order
         group_settings.sort(key=lambda x: x["Layer exposure time (ms)"])
-        group_images = [images[s["Image file"]] for s in group_settings]
+
+        # Create a list of image copies to avoid modifying originals
+        group_images = [images[s["Image file"]].copy() for s in group_settings]
 
         # Skip groups with overlapping images (can't be combined)
         if check_overlap(group_images):
@@ -225,9 +231,10 @@ def optimize_print_settings(
     -------
     tuple[dict[str, Any], dict[str, Image.Image]]
         Tuple containing optimized settings and images.
+
     """
     new_settings = copy.deepcopy(print_settings)
-    all_images = images.copy()
+    all_images = copy.deepcopy(images)  # Deep copy to avoid modifying original images
 
     # Process each layer
     for i, layer in enumerate(new_settings.get("Layers", [])):
@@ -236,7 +243,7 @@ def optimize_print_settings(
         for img_setting in layer["Image settings list"]:
             img_name = img_setting["Image file"]
             if img_name in all_images:
-                layer_images[img_name] = all_images[img_name]
+                layer_images[img_name] = all_images[img_name].copy()  # Use copy to avoid modifying originals
 
         # Skip layers with no images
         if not layer_images:
