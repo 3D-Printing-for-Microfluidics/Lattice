@@ -154,34 +154,33 @@ def combine_exposures(
     return new_settings, new_images
 
 
-def optimize_layer(layer_dict: dict[str, Any]) -> dict[str, Any]:
-    """Optimize exposure times in a single layer by combining non-overlapping images.
-
-    This function combines images with the same settings (except exposure time)
-    that don't overlap spatially, reducing total print time.
+def optimize_layer(
+    image_settings: list[dict[str, Any]],
+    images: dict[str, Image.Image],
+) -> tuple[list[dict[str, Any]], dict[str, Image.Image]]:
+    """Optimize exposure times by combining non-overlapping images.
 
     Parameters
     ----------
-    layer_dict : dict[str, Any]
-        Dictionary containing layer settings including image settings list and images.
+    image_settings : list[dict[str, Any]]
+        List of image settings dictionaries
+    images : dict[str, Image.Image]
+        Dictionary mapping filenames to PIL Image objects
 
     Returns
     -------
-    dict[str, Any]
-        New layer dictionary with optimized image settings and images.
+    tuple[list[dict[str, Any]], dict[str, Image.Image]]
+        Tuple containing (optimized image settings, new/modified images)
 
     """
-    image_settings = layer_dict["Image settings list"]
-    images = layer_dict["Images"]
-
     # Skip optimization if there's only one image
     if len(image_settings) <= 1:
-        return layer_dict
+        return image_settings, {}
 
     # Group images by their settings (except name and exposure time)
     settings_groups = group_by_settings(image_settings)
     new_settings = []
-    new_images = copy.deepcopy(images)  # Use deep copy to avoid modifying original images
+    new_images = {}  # Will only contain newly created images
 
     # Process each group of images with the same settings
     for group_settings in settings_groups.values():
@@ -206,12 +205,7 @@ def optimize_layer(layer_dict: dict[str, Any]) -> dict[str, Any]:
         new_settings.extend(optimized_settings)
         new_images.update(optimized_images)
 
-    # Create new layer settings with the optimized settings
-    new_layer_settings = copy.deepcopy(layer_dict)
-    new_layer_settings["Image settings list"] = new_settings
-    new_layer_settings["Images"] = new_images
-
-    return new_layer_settings
+    return new_settings, new_images
 
 
 def optimize_print_settings(
@@ -238,27 +232,30 @@ def optimize_print_settings(
 
     # Process each layer
     for i, layer in enumerate(new_settings.get("Layers", [])):
-        # Collect images needed for this layer
+        # Get image settings and filter for valid images
+        image_settings = layer.get("Image settings list", [])
+        if not image_settings:
+            continue
+
+        # Get only the images needed for this layer's settings
         layer_images = {}
-        for img_setting in layer["Image settings list"]:
+        for img_setting in image_settings:
             img_name = img_setting["Image file"]
             if img_name in all_images:
-                layer_images[img_name] = all_images[img_name].copy()  # Use copy to avoid modifying originals
+                layer_images[img_name] = all_images[img_name]
 
-        # Skip layers with no images
+        # Skip layers with no valid images
         if not layer_images:
             continue
 
-        # Add images to the layer and optimize
-        layer["Images"] = layer_images
-        optimized_layer = optimize_layer(layer)
-        new_settings["Layers"][i] = optimized_layer
+        # Optimize the layer with clean separation of settings and images
+        optimized_settings, new_images = optimize_layer(image_settings, layer_images)
+
+        # Update the layer with optimized settings
+        new_settings["Layers"][i]["Image settings list"] = optimized_settings
 
         # Update the global images dictionary with new images
-        all_images.update(optimized_layer["Images"])
-
-        # Remove the images from the layer to save memory
-        del optimized_layer["Images"]
+        all_images.update(new_images)
 
     return new_settings, all_images
 
@@ -272,6 +269,7 @@ def optimize_print_file(input_path: Path, output_path: Path | None = None) -> No
         Path to input zip file containing print settings and images.
     output_path : Path | None, optional
         Path to output zip file. If None, uses input name + '_optimized.zip'.
+
     """
     if output_path is None:
         output_path = input_path.parent / f"{input_path.stem}_optimized.zip"

@@ -151,19 +151,20 @@ def test_check_group_overlaps_touching_edges(empty_image: Image.Image) -> None:
 
 def test_optimize_layer_empty_list() -> None:
     """Test layer optimization with empty input list."""
-    layer_dict = {"Image settings list": [], "Images": {}}
-    result = optimize_layer(layer_dict)
-    assert result["Image settings list"] == []
-    assert result["Images"] == {}
+    settings = []
+    images = {}
+    optimized_settings, new_images = optimize_layer(settings, images)
+    assert optimized_settings == []
+    assert new_images == {}
 
 
 def test_optimize_layer_single_image(sample_images: dict[str, Image.Image]) -> None:
     """Test layer optimization with single image."""
     settings = [{"Image file": "image1.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"}]
-    layer_dict = {"Image settings list": settings, "Images": {"image1.png": sample_images["image1.png"]}}
-    result = optimize_layer(layer_dict)
-    assert result["Image settings list"] == settings
-    assert "image1.png" in result["Images"]
+    images = {"image1.png": sample_images["image1.png"]}
+    optimized_settings, new_images = optimize_layer(settings, images)
+    assert optimized_settings == settings
+    assert new_images == {}  # No new images created for single image
 
 
 def test_optimize_layer_zero_exposure(sample_images: dict[str, Image.Image]) -> None:
@@ -172,14 +173,11 @@ def test_optimize_layer_zero_exposure(sample_images: dict[str, Image.Image]) -> 
         {"Image file": "image1.png", "Layer exposure time (ms)": 0, "Other setting": "value1"},
         {"Image file": "image2.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
     ]
-    layer_dict = {
-        "Image settings list": settings,
-        "Images": {"image1.png": sample_images["image1.png"], "image2.png": sample_images["image2.png"]},
-    }
-    result = optimize_layer(layer_dict)
-    assert len(result["Image settings list"]) == 1
-    assert result["Image settings list"][0]["Layer exposure time (ms)"] == 1000
-    assert "image1.png" in result["Images"]
+    images = {"image1.png": sample_images["image1.png"], "image2.png": sample_images["image2.png"]}
+    optimized_settings, new_images = optimize_layer(settings, images)
+    assert len(optimized_settings) == 1
+    assert optimized_settings[0]["Layer exposure time (ms)"] == 1000
+    assert len(new_images) > 0  # Should have created a new optimized image
 
 
 def test_optimize_layer_identical_exposures(sample_images: dict[str, Image.Image]) -> None:
@@ -188,16 +186,13 @@ def test_optimize_layer_identical_exposures(sample_images: dict[str, Image.Image
         {"Image file": "image1.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
         {"Image file": "image2.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
     ]
-    layer_dict = {
-        "Image settings list": settings,
-        "Images": {"image1.png": sample_images["image1.png"], "image2.png": sample_images["image2.png"]},
-    }
-    result = optimize_layer(layer_dict)
-    assert len(result["Image settings list"]) == 1
-    assert result["Image settings list"][0]["Layer exposure time (ms)"] == 1000
+    images = {"image1.png": sample_images["image1.png"], "image2.png": sample_images["image2.png"]}
+    optimized_settings, new_images = optimize_layer(settings, images)
+    assert len(optimized_settings) == 1
+    assert optimized_settings[0]["Layer exposure time (ms)"] == 1000
 
     # Verify that the new composite image was created
-    assert any("_opt_" in name for name in result["Images"])
+    assert any("_opt_" in name for name in new_images)
 
 
 def test_optimize_print_file_empty_layers() -> None:
@@ -263,15 +258,15 @@ def test_optimize_layer_mixed_settings(sample_images: dict[str, Image.Image]) ->
         {"Image file": "image2.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
         {"Image file": "image3.png", "Layer exposure time (ms)": 1000, "Other setting": "value2"},
     ]
-    layer_dict = {"Image settings list": settings, "Images": sample_images}
-    result = optimize_layer(layer_dict)
+    images = sample_images
+    optimized_settings, new_images = optimize_layer(settings, images)
 
     # Should have two settings: one combined (image1+image2) and one original (image3)
-    assert len(result["Image settings list"]) == 2
+    assert len(optimized_settings) == 2
 
     # Find the combined and uncombined settings
-    combined = next(s for s in result["Image settings list"] if "_opt_" in s["Image file"])
-    uncombined = next(s for s in result["Image settings list"] if "_opt_" not in s["Image file"])
+    combined = next(s for s in optimized_settings if "_opt_" in s["Image file"])
+    uncombined = next(s for s in optimized_settings if "_opt_" not in s["Image file"])
 
     # Check combined setting
     assert combined["Layer exposure time (ms)"] == 1000
@@ -282,7 +277,7 @@ def test_optimize_layer_mixed_settings(sample_images: dict[str, Image.Image]) ->
     assert uncombined["Other setting"] == "value2"
 
     # Verify image contents
-    combined_img = result["Images"][combined["Image file"]]
+    combined_img = new_images[combined["Image file"]]
     # The combined image should be the union of image1 and image2
     expected_combined = ImageChops.lighter(sample_images["image1.png"], sample_images["image2.png"])
     assert ImageChops.difference(combined_img, expected_combined).getbbox() is None
@@ -294,15 +289,13 @@ def test_optimize_layer_overlapping_images(sample_images: dict[str, Image.Image]
         {"Image file": "image1.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
         {"Image file": "image3.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
     ]
-    layer_dict = {
-        "Image settings list": settings,
-        "Images": {"image1.png": sample_images["image1.png"], "image3.png": sample_images["image3.png"]},
-    }
-    result = optimize_layer(layer_dict)
+    images = {"image1.png": sample_images["image1.png"], "image3.png": sample_images["image3.png"]}
+    optimized_settings, new_images = optimize_layer(settings, images)
 
     # Should keep original settings since images overlap
-    assert len(result["Image settings list"]) == 2
-    assert {s["Image file"] for s in result["Image settings list"]} == {"image1.png", "image3.png"}
+    assert len(optimized_settings) == 2
+    assert {s["Image file"] for s in optimized_settings} == {"image1.png", "image3.png"}
+    assert len(new_images) == 0  # No new images should be created
 
 
 def test_optimize_layer_progressive_exposures(sample_images: dict[str, Image.Image]) -> None:
@@ -314,26 +307,25 @@ def test_optimize_layer_progressive_exposures(sample_images: dict[str, Image.Ima
         {"Image file": "image1.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
         {"Image file": "image2.png", "Layer exposure time (ms)": 2000, "Other setting": "value1"},
     ]
-    layer_dict = {"Image settings list": settings, "Images": test_images}
-    result = optimize_layer(layer_dict)
+    optimized_settings, new_images = optimize_layer(settings, test_images)
 
     # Should have two optimized settings
-    assert len(result["Image settings list"]) == 2
+    assert len(optimized_settings) == 2
 
     # Sort settings by exposure time to ensure order
-    sorted_settings = sorted(result["Image settings list"], key=lambda x: x["Layer exposure time (ms)"])
+    sorted_settings = sorted(optimized_settings, key=lambda x: x["Layer exposure time (ms)"])
     first, second = sorted_settings
 
     # First setting should be both images exposed for 1000ms
     assert first["Layer exposure time (ms)"] == 1000
     assert "_opt_" in first["Image file"]
-    first_img = result["Images"][first["Image file"]]
+    first_img = new_images[first["Image file"]]
     expected_first = ImageChops.lighter(test_images["image1.png"], test_images["image2.png"])
     assert ImageChops.difference(first_img, expected_first).getbbox() is None
 
     # Second setting should be just image2 exposed for additional 1000ms
     assert second["Layer exposure time (ms)"] == 1000
     assert "_opt_" in second["Image file"]
-    second_img = result["Images"][second["Image file"]]
+    second_img = new_images[second["Image file"]]
     # The second image should be just image2 since it needs more exposure
     assert ImageChops.difference(second_img, test_images["image2.png"]).getbbox() is None
