@@ -1,8 +1,8 @@
 """App methods in the File menu."""
 
 import json
+import logging
 import tkinter as tk
-import traceback
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
@@ -11,6 +11,8 @@ from app.gen_print_file import new_print_file
 from app.image_ops import get_component_dimensions
 from app.menus.menu import Menu
 from app.popup import Popup
+
+logger = logging.getLogger(__name__)
 
 
 class FileMenu(Menu):
@@ -49,6 +51,7 @@ class FileMenu(Menu):
             width, height = get_component_dimensions(file_path)
         except Exception as exc:
             messagebox.showerror("Error", f"Failed to load component: {exc}")
+            logger.exception("Failed to load component")
             return
         self.app.comp_width = width
         self.app.comp_height = height
@@ -162,11 +165,13 @@ class FileMenu(Menu):
         """Generate a new print file with scaled exposure settings and composite images."""
         # Check if a component has been loaded
         if not self.app.component_file:
+            logger.error("No component file loaded")
             messagebox.showerror("Error", "Please load a component file first.")
             return
 
         # Check if the canvas is empty
         if not any(self.app.groups.values()):
+            logger.error("No components on canvas")
             messagebox.showerror("Error", "Please add some components to the canvas first.")
             return
 
@@ -178,6 +183,7 @@ class FileMenu(Menu):
                 component.select()
 
             msg = f"Cannot generate print file.\n\n{len(overlapping_components)} components overlap."
+            logger.error("Cannot generate print file: %d components overlap", len(overlapping_components))
             messagebox.showerror("Error", msg)
             return
 
@@ -188,6 +194,7 @@ class FileMenu(Menu):
             filetypes=[("Zip", "*.zip"), ("All files", "*.*")],
         )
         if not output_path:
+            logger.info("Print file generation cancelled by user")
             return
 
         # Ask user if they want to run exposure optimization
@@ -196,16 +203,17 @@ class FileMenu(Menu):
             "This will combine non-overlapping images with similar settings to reduce print time."
         )
         optimize = messagebox.askyesno("Exposure Optimization", opt_msg)
+        logger.info("User selected exposure optimization: %s", optimize)
 
         popup = Popup(self.app.root, message="Generating print file...")
         try:
             data = self.get_layout_data().get("components", [])
             new_print_file(Path(self.app.component_file), Path(output_path), data, optimize=optimize)
+            logger.info("Print file successfully generated: %s", output_path)
             messagebox.showinfo("Success", f"Print file saved to:\n{output_path}")
         except Exception as e:
-            msg = f"Error generating print file: {e}"
-            print(msg)
-            traceback.print_exc()
-            messagebox.showerror("Error", msg)
+            error_msg = "Error generating print file"
+            logger.exception(error_msg)
+            messagebox.showerror("Error", error_msg + f": {e}")
         finally:
             popup.destroy()

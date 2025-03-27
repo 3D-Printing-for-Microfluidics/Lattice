@@ -1,5 +1,6 @@
 test_files/
 *.json
+logs/
 
 # Regenerable LaTeX compilation byproducts
 *.aux

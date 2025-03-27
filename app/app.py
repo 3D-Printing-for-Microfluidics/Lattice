@@ -8,6 +8,7 @@ from tkinter import filedialog, messagebox
 from typing import TYPE_CHECKING
 
 from app.constants import CANVAS_HEIGHT, CANVAS_WIDTH
+from app.logging_setup import setup_logging
 from app.menus.arrange_menu import ArrangeMenu
 from app.menus.component_menu import ComponentMenu
 from app.menus.file_menu import FileMenu
@@ -17,7 +18,6 @@ from app.menus.view_menu import ViewMenu
 if TYPE_CHECKING:
     from component import Component
 
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -235,8 +235,12 @@ class App:
         return filedialog.askopenfilename(title="Select component zip file.", filetypes=[("Zip", "*.zip")])
 
 
-def main():
+def main() -> None:
+    """Start the application."""
+    setup_logging()
+    logger.info("Starting 3D Print Dose Customization application")
     App()
+    logger.info("Application closed")
 
 
 if __name__ == "__main__":

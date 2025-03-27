@@ -2,6 +2,7 @@
 
 import io
 import json
+import logging
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,8 @@ from typing import Any
 from PIL import Image
 
 from app.constants import CANVAS_HEIGHT, CANVAS_WIDTH
+
+logger = logging.getLogger(__name__)
 
 
 def ensure_default_image(print_settings: dict[str, Any], images: dict[str, Image.Image]) -> None:
@@ -72,12 +75,15 @@ def load_print_file(input_path: Path) -> tuple[dict[str, Any], dict[str, Image.I
         - Dictionary mapping filenames to PIL Image objects
 
     """
+    logger.info("Loading print file from %s", input_path)
     if input_path.suffix.lower() != ".zip":
         msg = "Input path must be a .zip file."
+        logger.error(msg)
         raise ValueError(msg)
 
     images: dict[str, Image.Image] = {}
     with zipfile.ZipFile(input_path, "r") as zf:
+        logger.debug("Reading print_settings.json from zip")
         with zf.open("print_settings.json") as f:
             print_settings = json.load(f)
 
@@ -87,38 +93,44 @@ def load_print_file(input_path: Path) -> tuple[dict[str, Any], dict[str, Image.I
             for img_setting in layer.get("Image settings list", []):
                 unique_images.add(img_setting["Image file"])
 
+        logger.info("Loading %d unique images", len(unique_images))
+
         # Load all images
         for img_name in unique_images:
-            with zf.open(f"slices/{img_name}") as f:
-                images[img_name] = Image.open(f).convert("L")
+            try:
+                with zf.open(f"slices/{img_name}") as f:
+                    logger.debug("Loading image: %s", img_name)
+                    images[img_name] = Image.open(f).convert("L")
+            except (KeyError, OSError):
+                logger.exception("Failed to load image %s", img_name)
+                raise
 
+    logger.info(
+        "Print file loaded successfully: %d layers, %d images",
+        len(print_settings.get("Layers", [])),
+        len(images),
+    )
     return print_settings, images
 
 
 def save_print_file(output_path: Path, print_settings: dict[str, Any], images: dict[str, Image.Image]) -> None:
-    """Save print settings and images to a zip file.
+    """Save print settings and images to a zip file."""
+    logger.info("Saving print file to %s", output_path)
 
-    Parameters
-    ----------
-    output_path : Path
-        Path to save the output zip file.
-    print_settings : dict[str, Any]
-        The print settings dictionary.
-    images : dict[str, Image.Image]
-        Dictionary mapping filenames to PIL Image objects.
+    with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        # Save print settings
+        logger.debug("Writing print_settings.json")
+        zf.writestr("print_settings.json", json.dumps(print_settings, indent=2))
 
-    """
-    ensure_default_image(print_settings, images)
-    referenced_images = collect_referenced_images(print_settings)
+        # Create slices directory in zip
+        zf.writestr("slices/", "")
 
-    with zipfile.ZipFile(output_path, "w", compression=zipfile.ZIP_DEFLATED) as out_zip:
-        out_zip.writestr("print_settings.json", json.dumps(print_settings, indent=2))
+        # Save all images
+        logger.info("Saving %d images", len(images))
+        for img_name, img in images.items():
+            logger.debug("Saving image: %s", img_name)
+            img_bytes = io.BytesIO()
+            img.save(img_bytes, format="PNG")
+            zf.writestr(f"slices/{img_name}", img_bytes.getvalue())
 
-        for filename in referenced_images:
-            if filename in images:
-                img_bytes = io.BytesIO()
-                images[filename].save(img_bytes, format="PNG")
-                out_zip.writestr(f"slices/{filename}", img_bytes.getvalue())
-            else:
-                msg = f"Warning: Referenced image {filename} not found in images dictionary"
-                raise KeyError(msg)
+    logger.info("Print file saved successfully")
