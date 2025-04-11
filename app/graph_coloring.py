@@ -105,7 +105,7 @@ def partition_images(images: dict[str, Image.Image]) -> dict[int, list[str]]:
     """Partition images into non-overlapping groups using graph coloring."""
     logger.info("Starting partitioning of %d images", len(images))
 
-    # Create spatial grid for efficient overlap detection
+    # Create spatial grid for overlap detection
     grid_cells = create_spatial_grid(images)
 
     # Build conflict graph
