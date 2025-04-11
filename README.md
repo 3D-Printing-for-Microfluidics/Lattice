@@ -1,6 +1,6 @@
-# 3D Print Dose Customization Tool
+# Lattice: A Python utility for position-specific exposure control in 3D printing
 
-A graphical tool for arranging and customizing components for 3D printing with different exposure settings.
+Lattice is a graphical layout and design tool for high-throughput 3D printing that enables the simultaneous printing of many devices in a single print run by providing a way to easily arrange devices in the print area and control exposure settings for each one individually. 
 
 Run with `python -m app.app`
 
