@@ -10,7 +10,6 @@ from PIL import Image, ImageChops
 
 from app.constants import CANVAS_HEIGHT, CANVAS_WIDTH
 from app.exposure_optimizer import (
-    check_overlap,
     group_by_settings,
     optimize_layer,
     optimize_print_file,
@@ -104,49 +103,6 @@ def test_group_by_settings_identical_settings() -> None:
     groups = group_by_settings(settings)
     assert len(groups) == 1
     assert len(next(iter(groups.values()))) == 2
-
-
-def test_check_group_overlaps_empty_list() -> None:
-    """Test overlap detection with empty list."""
-    assert not check_overlap([])
-
-
-def test_check_group_overlaps_single_image() -> None:
-    """Test overlap detection with single image."""
-    img = Image.new("L", (CANVAS_WIDTH, CANVAS_HEIGHT), color=0)
-    img.paste(255, (0, 0, 100, 100))
-    assert not check_overlap([img])
-
-
-def test_check_group_overlaps_empty_images(empty_image: Image.Image) -> None:
-    """Test overlap detection with empty (all black) images.
-
-    Parameters
-    ----------
-    empty_image : Image.Image
-        Fixture providing an empty test image.
-
-    """
-    assert not check_overlap([empty_image, empty_image])
-
-
-def test_check_group_overlaps_touching_edges(empty_image: Image.Image) -> None:
-    """Test images that touch at edges but don't overlap.
-
-    Parameters
-    ----------
-    empty_image : Image.Image
-        Fixture providing an empty test image.
-
-    """
-    img1 = empty_image.copy()
-    img2 = empty_image.copy()
-
-    # Create two squares that touch at (100, 100)
-    img1.paste(255, (0, 0, 100, 100))
-    img2.paste(255, (100, 100, 200, 200))
-
-    assert not check_overlap([img1, img2])
 
 
 def test_optimize_layer_empty_list() -> None:
@@ -284,7 +240,7 @@ def test_optimize_layer_mixed_settings(sample_images: dict[str, Image.Image]) ->
 
 
 def test_optimize_layer_overlapping_images(sample_images: dict[str, Image.Image]) -> None:
-    """Test that overlapping images are not combined even with identical settings."""
+    """Test that overlapping images are partitioned and optimized separately."""
     settings = [
         {"Image file": "image1.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
         {"Image file": "image3.png", "Layer exposure time (ms)": 1000, "Other setting": "value1"},
@@ -292,10 +248,15 @@ def test_optimize_layer_overlapping_images(sample_images: dict[str, Image.Image]
     images = {"image1.png": sample_images["image1.png"], "image3.png": sample_images["image3.png"]}
     optimized_settings, new_images = optimize_layer(settings, images)
 
-    # Should keep original settings since images overlap
+    # Should have two optimized settings, one for each image
     assert len(optimized_settings) == 2
-    assert {s["Image file"] for s in optimized_settings} == {"image1.png", "image3.png"}
-    assert len(new_images) == 0  # No new images should be created
+    assert len(new_images) == 2  # Each image should be optimized separately
+
+    # Verify the optimized images have the correct exposure times
+    for setting in optimized_settings:
+        assert setting["Layer exposure time (ms)"] == 1000
+        assert setting["Other setting"] == "value1"
+        assert "_opt_" in setting["Image file"]
 
 
 def test_optimize_layer_progressive_exposures(sample_images: dict[str, Image.Image]) -> None:

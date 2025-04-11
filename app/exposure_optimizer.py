@@ -8,6 +8,7 @@ from typing import Any
 from PIL import Image, ImageChops
 
 from app.constants import CANVAS_HEIGHT, CANVAS_WIDTH
+from app.graph_coloring import partition_images
 from app.print_file_utils import load_print_file, save_print_file
 
 logger = logging.getLogger(__name__)
@@ -40,65 +41,6 @@ def group_by_settings(image_settings: list[dict[str, Any]]) -> dict[tuple[tuple[
 
     logger.debug("Grouped %d images into %d distinct setting groups", len(image_settings), len(groups))
     return groups
-
-
-def check_overlap(images: list[Image.Image]) -> bool:
-    """Detect if any images in the list have overlapping non-zero pixels.
-
-    Uses a fast approach by first checking bounding boxes, then only checking pixel
-    overlap for images with overlapping bounding boxes.
-
-    Parameters
-    ----------
-    images : list[Image.Image]
-        List of PIL images to check for overlaps.
-
-    Returns
-    -------
-    bool
-        True if any images overlap, False otherwise.
-
-    """
-    # Get non-empty bounding boxes for all images
-    bboxes = []
-    valid_images = []
-    for img in images:
-        bbox = img.getbbox()
-        if bbox is not None:
-            bboxes.append(bbox)
-            valid_images.append(img)
-
-    # Check each pair of bounding boxes for overlap
-    for i, bbox1 in enumerate(bboxes):
-        x1, y1, x2, y2 = bbox1
-        for j in range(i):
-            x3, y3, x4, y4 = bboxes[j]
-
-            # Fast bounding box overlap check
-            if x2 <= x3 or x4 <= x1 or y2 <= y3 or y4 <= y1:
-                continue  # No overlap
-
-            # Bounding boxes overlap, check pixel-level overlap
-            img1 = valid_images[i]
-            img2 = valid_images[j]
-
-            # Get the overlapping region
-            overlap_bbox = (max(x1, x3), max(y1, y3), min(x2, x4), min(y2, y4))
-
-            # Crop to the overlapping region for faster comparison
-            crop1 = img1.crop(overlap_bbox)
-            crop2 = img2.crop(overlap_bbox)
-
-            # Check if any pixels overlap
-            overlap = ImageChops.multiply(crop1, crop2)
-
-            # If there are any non-zero pixels in the result, there's an overlap
-            if overlap.getbbox() is not None:
-                logger.debug("Overlap detected between images %d and %d", i, j)
-                return True
-
-    logger.debug("No overlaps found")
-    return False
 
 
 def combine_exposures(
@@ -216,22 +158,27 @@ def optimize_layer(
         # Sort by exposure time to process in order
         group_settings.sort(key=lambda x: x["Layer exposure time (ms)"])
 
-        # Create a list of image copies to avoid modifying originals
-        group_images = [images[s["Image file"]].copy() for s in group_settings]
+        # Create a dictionary of images for this group
+        group_images_dict = {s["Image file"]: images[s["Image file"]].copy() for s in group_settings}
 
-        # Skip groups with overlapping images (can't be combined)
-        logger.debug("Checking for overlaps in group %d", group_idx)
-        if check_overlap(group_images):
-            logger.debug("Skipping optimization for group with overlapping images")
-            new_settings.extend(group_settings)
-            continue
+        # Use graph coloring to partition images into non-overlapping groups
+        logger.debug("Partitioning images in group %d using graph coloring", group_idx)
+        partitioned_groups = partition_images(group_images_dict)
 
-        # Create optimized exposures by combining images
-        logger.debug("Optimizing exposures for group %d", group_idx)
-        optimized_settings, optimized_images = combine_exposures(group_settings, group_images)
-        new_settings.extend(optimized_settings)
-        new_images.update(optimized_images)
-        logger.debug("Created %d optimized images for group %d", len(optimized_images), group_idx)
+        # Process each non-overlapping partition
+        for partition_idx, image_names in partitioned_groups.items():
+            logger.debug("Processing partition %d with %d images", partition_idx, len(image_names))
+
+            # Get settings and images for this partition
+            settings = [s for s in group_settings if s["Image file"] in image_names]
+            images = [group_images_dict[name] for name in image_names]
+
+            # Create optimized exposures by combining images in this partition
+            logger.debug("Optimizing exposures for partition %d", partition_idx)
+            optimized_settings, optimized_images = combine_exposures(settings, images)
+            new_settings.extend(optimized_settings)
+            new_images.update(optimized_images)
+            logger.debug("Created %d optimized images for partition %d", len(optimized_images), partition_idx)
 
     logger.info(
         "Layer optimization complete: %d input images → %d output images, %d new images created",
